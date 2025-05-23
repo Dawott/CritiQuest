@@ -6,7 +6,7 @@ module.exports = {
   transformIgnorePatterns: [
     'node_modules/(?!(@react-native|react-native|react-native-vector-icons)/)',
   ],
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  //setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
