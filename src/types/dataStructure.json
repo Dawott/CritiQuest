@@ -1,0 +1,238 @@
+//Generalna struktura dla userów
+[{
+  "users": {
+    "userId": {
+      "profile": {
+        "username": "string",
+        "email": "string",
+        "avatarUrl": "string",
+        "joinedAt": "timestamp",
+        "lastActive": "timestamp"
+      },
+      "progression": {
+        "level": "number",
+        "experience": "number",
+        "currentStage": "string",
+        "completedLessons": ["lessonId1", "lessonId2"],
+        "unlockedPhilosophers": ["philosopherId1", "philosopherId2"]
+      },
+      "stats": {
+        "totalTimeSpent": "number",
+        "streakDays": "number",
+        "lastStreakUpdate": "timestamp",
+        "quizzesCompleted": "number",
+        "perfectScores": "number"
+      },
+      "achievements": {
+        "achievementId": {
+          "unlockedAt": "timestamp",
+          "progress": "number"
+        }
+      },
+      "philosopherCollection": {
+        "philosopherId": {
+          "level": "number",
+          "experience": "number",
+          "duplicates": "number", // gacha-merge dla duplikatów
+          "stats": {
+            "logic": "number",
+            "ethics": "number",
+            "metaphysics": "number",
+            "epistemology": "number"
+          }
+        }
+      }
+    }
+  }
+},
+//Awatary filozofów
+{
+  "philosophers": {
+    "philosopherId": {
+      "name": "string",
+      "era": "string",
+      "school": "string",
+      "rarity": "common|rare|epic|legendary",
+      "baseStats": {
+        "logic": "number",
+        "ethics": "number",
+        "metaphysics": "number",
+        "epistemology": "number"
+      },
+      "description": "string",
+      "imageUrl": "string",
+      "quotes": ["quote1", "quote2"],
+      "specialAbility": {
+        "name": "string",
+        "description": "string",
+        "effect": "string" // TBD, skille do rozwiązywania testów
+      }
+    }
+  }
+},
+//Lekcje
+{
+  "lessons": {
+    "lessonId": {
+      "title": "string",
+      "description": "string",
+      "stage": "string",
+      "order": "number",
+      "difficulty": "beginner|intermediate|advanced",
+      "estimatedTime": "number", // minuty
+      "philosophicalConcepts": ["concept1", "concept2"],
+      "requiredPhilosopher": "philosopherId", // ciekawa mechanika, ale trochę exploitative
+      "content": {
+        "sections": [
+          {
+            "type": "text|interactive|video",
+            "content": "string",
+            "order": "number"
+          }
+        ]
+      },
+      "quiz": "quizId",
+      "rewards": {
+        "experience": "number",
+        "gachaTickets": "number"
+      }
+    }
+  }
+},
+//Quizy i wyzwania
+{
+  "quizzes": {
+    "quizId": {
+      "lessonId": "string",
+      "title": "string",
+      "type": "multiple-choice|scenario|debate",
+      "timeLimit": "number", // minuty
+      "questions": [
+        {
+          "id": "string",
+          "text": "string",
+          "type": "single|multiple|scenario",
+          "options": ["option1", "option2"],
+          "correctAnswers": ["answer1"],
+          "explanation": "string",
+          "philosophicalContext": "string",
+          "points": "number"
+        }
+      ],
+      "passingScore": "number",
+      "philosopherBonus": {
+        "philosopherId": "string",
+        "bonusMultiplier": "number"
+      }
+    }
+  }
+},
+//Osiągnięcia
+{
+  "achievements": {
+    "achievementId": {
+      "name": "string",
+      "description": "string",
+      "icon": "string",
+      "category": "learning|collection|social|mastery",
+      "requirements": {
+        "type": "lessons_completed|philosophers_collected|perfect_scores",
+        "value": "number"
+      },
+      "rewards": {
+        "experience": "number",
+        "gachaTickets": "number",
+        "specialPhilosopher": "philosopherId" // opcjonalnie
+      }
+    }
+  }
+},
+//Gacha
+{
+  "gachaSystem": {
+    "pools": {
+      "standard": {
+        "name": "string",
+        "cost": {
+          "tickets": "number",
+          "coins": "number"
+        },
+        "rates": {
+          "common": 0.6,
+          "rare": 0.3,
+          "epic": 0.08,
+          "legendary": 0.02
+        },
+        "featuredPhilosophers": ["philosopherId1"],
+        "guaranteedRare": 10 // pity system
+      }
+    },
+    "history": {
+      "userId": {
+        "pulls": [
+          {
+            "timestamp": "timestamp",
+            "pool": "string",
+            "result": "philosopherId"
+          }
+        ]
+      }
+    }
+  }
+},
+//Postęp
+{
+  "userProgress": {
+    "userId": {
+      "lessonId": {
+        "startedAt": "timestamp",
+        "completedAt": "timestamp",
+        "attempts": "number",
+        "bestScore": "number",
+        "timeSpent": "number",
+        "notesCount": "number"
+      }
+    }
+  }
+},
+//Leaderboard
+{
+  "leaderboards": {
+    "weekly": {
+      "userId": {
+        "username": "string",
+        "score": "number",
+        "level": "number",
+        "philosopherCount": "number"
+      }
+    },
+    "allTime": {
+      "userId": {
+        "username": "string",
+        "score": "number",
+        "level": "number",
+        "philosopherCount": "number"
+      }
+    }
+  }
+},
+//Eventy i wyzwania
+{
+  "dailyChallenges": {
+    "2026-01-15": {
+      "philosophical_dilemma": {
+        "title": "string",
+        "scenario": "string",
+        "choices": ["choice1", "choice2"],
+        "philosopherPerspectives": {
+          "philosopherId": "string response"
+        },
+        "rewards": {
+          "experience": "number",
+          "tickets": "number"
+        }
+      }
+    }
+  }
+}
+]
