@@ -14,9 +14,16 @@
     "@react-native-firebase/app": "^22.2.0",
     "@react-native-firebase/auth": "^22.2.0",
     "@react-native-firebase/database": "^22.2.0",
+    "@react-navigation/bottom-tabs": "^7.3.13",
+    "@react-navigation/native": "^7.1.9",
+    "@react-navigation/native-stack": "^7.3.13",
+    "@types/react-native-vector-icons": "^6.4.18",
     "lottie-react-native": "^7.2.2",
     "react": "19.0.0",
     "react-native": "0.79.2",
+    "react-native-safe-area-context": "^5.4.1",
+    "react-native-screens": "^4.11.1",
+    "react-native-vector-icons": "^10.2.0",
     "zod": "^3.25.30"
   },
   "devDependencies": {
