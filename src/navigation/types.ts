@@ -19,6 +19,7 @@ export type MainTabParamList = {
   Wyrocznia: undefined;
   Gimnazjon: undefined;
   Profil: undefined;
+  DevMenu?: undefined; //tylko pod dev
 };
 
 export type LearnStackParamList = {

@@ -18,6 +18,7 @@ import GachaScreen from '@/screens/gacha/GachaScreen';
 import GachaAnimationScreen from '@/screens/gacha/GachaAnimationScreen';
 import LearnNavigator from './LearnNavigator';
 import CollectionNavigator from './CollectionNavigator';
+import DevMenu from '@/screens/DevMenu'
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -87,6 +88,19 @@ function MainTabs() {
           ),
         }}
       />
+      
+      {__DEV__ && ( //Tylko dev
+      <Tab.Screen 
+  name="DevMenu" 
+  component={DevMenu}
+  options={{
+    tabBarLabel: 'Dev',
+    tabBarIcon: ({ color, size }) => (
+      <Ionicons name="construct-outline" color={color} size={size} />
+    ),
+  }}
+/>
+)}
     </Tab.Navigator>
   );
 }
