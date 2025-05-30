@@ -1,10 +1,3 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
-
 import React from 'react';
 import type {PropsWithChildren} from 'react';
 import {
@@ -23,6 +16,10 @@ import {
   LearnMoreLinks,
   ReloadInstructions,
 } from 'react-native/Libraries/NewAppScreen';
+//import StorybookUI from './src/Storybook';
+
+
+const SHOW_STORYBOOK = __DEV__ && false; // Set to true to show Storybook
 
 type SectionProps = PropsWithChildren<{
   title: string;
@@ -56,6 +53,10 @@ function Section({children, title}: SectionProps): React.JSX.Element {
 
 function App(): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
+
+  if (SHOW_STORYBOOK) {
+    return <StorybookUI />;
+  }
 
   const backgroundStyle = {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
@@ -107,6 +108,8 @@ function App(): React.JSX.Element {
       </ScrollView>
     </View>
   );
+
+  
 }
 
 const styles = StyleSheet.create({
