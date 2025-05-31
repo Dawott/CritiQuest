@@ -18,7 +18,8 @@ import GachaScreen from '@/screens/gacha/GachaScreen';
 import GachaAnimationScreen from '@/screens/gacha/GachaAnimationScreen';
 import LearnNavigator from './LearnNavigator';
 import CollectionNavigator from './CollectionNavigator';
-import DevMenu from '@/screens/DevMenu'
+import DevMenu from '@/screens/DevMenu';
+import LoadingScreen from '@/screens/auth/LoadingScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
