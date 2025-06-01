@@ -20,6 +20,7 @@ export interface UserStats {
   lastStreakUpdate: number;
   quizzesCompleted: number;
   perfectScores: number;
+  gachaTickets: number;
 }
 
 export interface Achievement {
