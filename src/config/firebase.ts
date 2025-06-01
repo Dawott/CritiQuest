@@ -1,3 +1,5 @@
+import firebase from '@react-native-firebase/app';
+
 export const DB_PATHS = {
   USERS: 'users',
   PHILOSOPHERS: 'philosophers',
@@ -18,5 +20,11 @@ export const firebaseConfig = {
   messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || "your-sender-id",
   appId: process.env.FIREBASE_APP_ID || "your-app-id"
 };
+
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+
+export { firebase };
 
 export const isDevelopment = __DEV__;

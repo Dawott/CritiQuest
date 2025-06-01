@@ -209,7 +209,7 @@ class DatabaseService {
       const data = snapshot.val() || {};
       const leaderboard = Object.entries(data)
         .map(([userId, userData]) => ({ userId, ...userData as any }))
-        .reverse(); // Firebase returns ascending, we want descending
+        .reverse(); 
       callback(leaderboard);
     });
 

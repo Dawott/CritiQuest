@@ -1,5 +1,5 @@
 module.exports = {
   root: true,
-  extends: ["@react-native", "plugin:storybook/recommended"],
+  extends: ["@react-native"],
   requireConfigFile: false,
 };
