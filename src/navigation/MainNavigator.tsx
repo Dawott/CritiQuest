@@ -10,7 +10,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import AuthScreen from '@/screens/auth/AuthScreen';
 import LoginScreen from '@/screens/auth/LoginScreen';
 import RegisterScreen from '@/screens/auth/RegisterScreen';
-import HomeScreen from '@/screens/main/HomeScreen';
+import HomeScreen from '@/screens/main/HomeScreen.tsx';
 import ProfileScreen from '@/screens/profile/ProfileScreen';
 import PhilosopherDetailScreen from '@/screens/philosophers/PhilosopherDetailScreen';
 import QuizScreen from '@/screens/philosophers/QuizScreen';
