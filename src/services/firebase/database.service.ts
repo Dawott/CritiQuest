@@ -34,6 +34,7 @@ class DatabaseService {
         lastStreakUpdate: Date.now(),
         quizzesCompleted: 0,
         perfectScores: 0,
+        gachaTickets: 0,
       },
       achievements: {},
       philosopherCollection: {},
@@ -72,6 +73,11 @@ class DatabaseService {
     });
   }
 
+  async getUserTickets(userId: string): Promise<number> {
+    const snapshot = await this.db.ref(`users/${userId}/stats/gachaTickets`).once('value');
+    return snapshot.val() || 0;
+  }
+
   //Filozofowie
   async getPhilosopher(philosopherId: string): Promise<Philosopher | null> {
     const snapshot = await this.db.ref(`philosophers/${philosopherId}`).once('value');
@@ -100,6 +106,11 @@ class DatabaseService {
     await this.db
       .ref(`users/${userId}/philosopherCollection/${philosopherId}`)
       .set(ownedPhilosopher);
+  }
+
+  async getUserPhilosophers(userId: string): Promise<Record<string, OwnedPhilosopher>> {
+    const snapshot = await this.db.ref(`users/${userId}/philosopherCollection`).once('value');
+    return snapshot.val() || {};
   }
 
   //Operacje na lekcjach
@@ -215,6 +226,52 @@ class DatabaseService {
 
     return () => ref.off('value', listener);
   }
+
+  //Gacha
+  async updateUserStats(userId: string, updates: Partial<any>): Promise<void> {
+    const statsRef = this.db.ref(`users/${userId}/stats`);
+    
+    // Handle incremental updates
+    const incrementalUpdates: Record<string, any> = {};
+    
+    for (const [key, value] of Object.entries(updates)) {
+      if (typeof value === 'number' && value < 0) {
+        // Negative number means decrement
+        incrementalUpdates[key] = database.ServerValue.increment(value);
+      } else {
+        incrementalUpdates[key] = value;
+      }
+    }
+    
+    await statsRef.update(incrementalUpdates);
+  }
+
+  async incrementPhilosopherDuplicates(userId: string, philosopherId: string): Promise<void> {
+    const philosopherRef = this.db.ref(`users/${userId}/philosopherCollection/${philosopherId}`);
+    
+    await philosopherRef.update({
+      duplicates: database.ServerValue.increment(1),
+      // Tymczasowo zwiększamy staty za duplikaty
+      experience: database.ServerValue.increment(50) // Bonus XP za duplikat
+    });
+  }
+
+  async addGachaHistory(userId: string, history: any): Promise<void> {
+    await this.db.ref(`gachaSystem/history/${userId}/pulls`).push(history);
+  }
+
+  async getUserGachaHistory(userId: string, limit: number = 50): Promise<any[]> {
+    const snapshot = await this.db
+      .ref(`gachaSystem/history/${userId}/pulls`)
+      .orderByChild('timestamp')
+      .limitToLast(limit)
+      .once('value');
+    
+    const history = snapshot.val() || {};
+    return Object.values(history).reverse(); // Most recent first
+  }
+
+
 }
 
 export default new DatabaseService();
