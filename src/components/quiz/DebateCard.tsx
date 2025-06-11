@@ -9,27 +9,12 @@ import {
   Animated,
   Dimensions,
 } from 'react-native';
+import { DebatePhilosopher } from '@/hooks/selectedPhilosophers';
+import { Philosopher, Rarity } from '@/types/database.types';
 
 //const { width, height } = Dimensions.get('window');
 
 // Mock struktur
-interface Philosopher {
-  id: string;
-  name: string;
-  school: string;
-  era: string;
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
-  stats: {
-    logic: number;
-    ethics: number;
-    metaphysics: number;
-    epistemology: number;
-    rhetoric: number;
-  };
-  avatar: string;
-  signature_argument: string;
-}
-
 interface DebateArgument {
   id: string;
   text: string;
@@ -50,8 +35,8 @@ interface DebateTopic {
 
 interface DebateCardProps {
   topic: DebateTopic;
-  userPhilosophers: Philosopher[];
-  opponentPhilosophers: Philosopher[];
+  userPhilosophers: DebatePhilosopher[];
+  opponentPhilosophers: DebatePhilosopher[];
   onDebateComplete: (result: DebateResult) => void;
 }
 
@@ -106,6 +91,24 @@ const DebateCard: React.FC<DebateCardProps> = ({
   const opponentConvictionAnim = useRef(new Animated.Value(50)).current;
   const battleFlashAnim = useRef(new Animated.Value(0)).current;
   const philosopherShakeAnim = useRef(new Animated.Value(0)).current;
+
+const getDebateStats = (philosopher: DebatePhilosopher) => {
+    return {
+      logic: philosopher.baseStats.logic,
+      ethics: philosopher.baseStats.ethics,
+      metaphysics: philosopher.baseStats.metaphysics,
+      epistemology: philosopher.baseStats.epistemology,
+      rhetoric: philosopher.rhetoric || Math.round((philosopher.baseStats.language + philosopher.baseStats.social) / 2),
+    };
+  };
+
+  const getAvatar = (philosopher: DebatePhilosopher) => {
+    return philosopher.avatar || '🏛️';
+  };
+
+  const getSignatureArgument = (philosopher: DebatePhilosopher) => {
+    return philosopher.signature_argument || philosopher.specialAbility.name || 'Philosophical argument';
+  };
 
 //TBD - AI service
 /*
@@ -191,6 +194,9 @@ const DebateCard: React.FC<DebateCardProps> = ({
     if (userArgument.weakness_against.includes(opponentPhil.school.toLowerCase())) {
       effectiveness -= 6;
     }
+
+    const userStats = getDebateStats(userPhil);
+    effectiveness += Math.round(userStats.rhetoric / 10);
     
     // Dodaj losowość
     effectiveness += Math.random() * 10 - 5;
@@ -330,7 +336,7 @@ const DebateCard: React.FC<DebateCardProps> = ({
     onDebateComplete(result);
   };
 
-  const renderPhilosopher = (philosopher: Philosopher, isUser: boolean, conviction: number) => (
+  const renderPhilosopher = (philosopher: DebatePhilosopher, isUser: boolean, conviction: number) => (
     <Animated.View 
       style={[
         styles.philosopherContainer,
@@ -395,14 +401,14 @@ const DebateCard: React.FC<DebateCardProps> = ({
           ]}
         >
           <View style={styles.philosophersRow}>
-            {renderPhilosopher(userPhilosophers[0], true, debateState.userConviction)}
+            {userPhilosophers.length > 0 && renderPhilosopher(userPhilosophers[0], true, debateState.userConviction)}
             
             <View style={styles.vsContainer}>
               <Text style={styles.vsText}>VS</Text>
               <Text style={styles.roundText}>Runda {debateState.currentRound}/{debateState.maxRounds}</Text>
             </View>
             
-            {renderPhilosopher(opponentPhilosophers[0], false, debateState.opponentConviction)}
+            {opponentPhilosophers.length > 0 && renderPhilosopher(opponentPhilosophers[0], false, debateState.opponentConviction)}
           </View>
         </Animated.View>
 

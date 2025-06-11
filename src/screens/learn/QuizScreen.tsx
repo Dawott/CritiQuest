@@ -26,10 +26,10 @@ import ScenarioCard from '@/components/quiz/ScenarioCard';
 import DebateCard from '@/components/quiz/DebateCard.tsx';
 import QuizResults from '@/components/quiz/QuizResults';
 import PhilosopherHelper from '@/components/quiz/PhilosopherHelper';
-import { useSelectedPhilosophers } from '@/hooks/selectedPhilosophers';
+import { useSelectedPhilosophers, DebatePhilosopher } from '@/hooks/selectedPhilosophers';
 
 const { width, height } = Dimensions.get('window');
-const { selectedPhilosophers, loading: philosophersLoading } = useSelectedPhilosophers(user);
+
 
 export default function QuizScreen() {
   const route = useRoute();
@@ -40,7 +40,7 @@ export default function QuizScreen() {
   const [session, setSession] = useAtom(quizSessionAtom);
   const [progress, setProgress] = useAtom(quizProgressAtom);
   const [timer] = useAtom(quizTimerAtom);
-  
+  const { selectedPhilosophers, loading: philosophersLoading } = useSelectedPhilosophers(user);
   const [loading, setLoading] = useState(true);
   const [showResults, setShowResults] = useState(false);
   const [showHint, setShowHint] = useState(false);
@@ -212,108 +212,7 @@ export default function QuizScreen() {
     
     setShowResults(true);
   };
-/*
-  const getSelectedTeam = useCallback(async (): Promise<Philosopher[]> => {
-  if (!user?.philosopherCollection) return [];
-  
-  try {
-    const ownedPhilosopherIds = Object.keys(user.philosopherCollection);
-    
-    if (ownedPhilosopherIds.length === 0) {
-      return [{
-        id: 'default_socrates',
-        name: 'Sokrates',
-        school: 'Filozofia Klasyczna', 
-        era: 'Starożytność',
-        rarity: 'common',
-        stats: {
-          logic: 75,
-          ethics: 80,
-          metaphysics: 70,
-          epistemology: 90,
-          aesthetics: 60,
-          mind: 85,
-          language: 80,
-          science: 50,
-          social: 75,
-        },
-        avatar: '🏛️',
-        signature_argument: 'Wiem, że nic nie wiem',
-      }];
-    }
-    
-    const firstPhilosopherId = ownedPhilosopherIds[0];
-    const ownedPhilosopher = user.philosopherCollection[firstPhilosopherId];
-    
-    const fullPhilosopherData = await DatabaseService.getPhilosopher(firstPhilosopherId);
-    
-    if (fullPhilosopherData) {
-      return [{
-        ...fullPhilosopherData,
-        id: firstPhilosopherId,
-        stats: ownedPhilosopher.stats,
-      }];
-    }
-    
-    return [{
-      id: firstPhilosopherId,
-      name: getPhilosopherNameFallback(firstPhilosopherId),
-      school: ownedPhilosopher.school || 'Nieznana Szkoła',
-      era: 'Era Filozoficzna',
-      rarity: 'common',
-      stats: ownedPhilosopher.stats,
-      avatar: '🏛️',
-      signature_argument: 'Filozoficzny argument',
-    }];
-    
-  } catch (error) {
-    console.error('Error fetching philosopher data:', error);
-    
-    return [{
-      id: 'error_default',
-      name: 'Domyślny Filozof',
-      school: 'Ogólna Filozofia',
-      era: 'Współczesność',
-      rarity: 'common',
-      stats: {
-        logic: 60,
-        ethics: 60,
-        metaphysics: 60,
-        epistemology: 60,
-        aesthetics: 60,
-        mind: 60,
-        language: 60,
-        science: 60,
-        social: 60,
-      },
-      avatar: '🎓',
-      signature_argument: 'Myślenie krytyczne',
-    }];
-  }
-}, [user]);
 
-const getPhilosopherNameFallback = (philosopherId: string): string => {
-  const nameMap: Record<string, string> = {
-    'socrates': 'Sokrates',
-    'plato': 'Platon',
-    'aristotle': 'Arystoteles', 
-    'kant': 'Immanuel Kant',
-    'nietzsche': 'Friedrich Nietzsche',
-    'descartes': 'René Descartes',
-    'hume': 'David Hume',
-    'spinoza': 'Baruch Spinoza',
-    'wittgenstein': 'Ludwig Wittgenstein',
-    'sartre': 'Jean-Paul Sartre',
-    'beauvoir': 'Simone de Beauvoir',
-    'foucault': 'Michel Foucault',
-    'mill': 'John Stuart Mill',
-    'rawls': 'John Rawls',
-    'nozick': 'Robert Nozick',
-  };
-  
-  return nameMap[philosopherId] || 'Filozof';
-};
-*/
 const handleDebateResult = useCallback((questionId: string, result: DebateResult) => {
   if (!session) return;
   const score = result.conviction_score;
@@ -361,16 +260,56 @@ const handleDebateResult = useCallback((questionId: string, result: DebateResult
     switch (session.quiz.type) {
       case 'debate':
       if (currentQuestion.type === 'debate' && currentQuestion.debateConfig) {
+        const debateTopic = {
+          id: currentQuestion.id,
+          title: currentQuestion.debateConfig.title,
+          context: currentQuestion.debateConfig.context,
+          question: currentQuestion.debateConfig.question,
+          schools_involved: currentQuestion.debateConfig.schools_involved,
+        };
+        
+        // Mock na demo
+        const opponentPhilosophers: DebatePhilosopher[] = [{
+          id: 'opponent_kant',
+          name: 'Immanuel Kant',
+          school: 'Idealizm Niemiecki',
+          era: 'Oświecenie',
+          rarity: 'legendary' as const,
+          baseStats: {
+            logic: 95,
+            ethics: 100,
+            metaphysics: 85,
+            epistemology: 98,
+            aesthetics: 70,
+            mind: 95,
+            language: 90,
+            science: 75,
+            social: 80,
+          },
+          description: 'Wielki niemiecki myśliciel znany z idei Imperatywu Kategorycznego',
+          imageUrl: '',
+          quotes: ['Istnieje tylko jeden imperatyw kategoryczny: postępuj tylko wedle takiej maksymy, co do której możesz zarazem chcieć, żeby stała się powszechnym prawem.'],
+          specialAbility: {
+            name: 'Imperatyw Kategoryczny',
+            description: 'Uniwersalne Prawo Moralne',
+            effect: 'Siła argumentów'
+          },
+          avatar: '👨‍🎓',
+          signature_argument: 'Imperatyw kategoryczny',
+          rhetoric: 85,
+        }];
+        
         return (
           <DebateCard
-            question={currentQuestion as DebateQuestion}
+            topic={debateTopic}
             userPhilosophers={selectedPhilosophers}
-            onAnswer={handleDebateResult}
-            philosopherBonus={session.philosopherBonus}
+            opponentPhilosophers={opponentPhilosophers}
+            onDebateComplete={(result) => handleDebateResult(currentQuestion.id, result)}
           />
         );
       }
       return null;
+
       case 'multiple-choice':
         return (
           <QuestionCard
