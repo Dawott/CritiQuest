@@ -13,7 +13,7 @@ import RegisterScreen from '@/screens/auth/RegisterScreen';
 import HomeScreen from '@/screens/main/HomeScreen.tsx';
 import ProfileScreen from '@/screens/profile/ProfileScreen';
 import PhilosopherDetailScreen from '@/screens/collection/PhilosopherDetailScreen';
-import QuizScreen from '@/screens/learn/QuizScreen';
+import QuizScreen from '@/screens/learn/QuizScreen.tsx';
 import GachaScreen from '@/screens/gacha/GachaScreen.tsx';
 import GachaAnimationScreen from '@/screens/gacha/GachaAnimationScreen';
 import LearnNavigator from './LearnNavigator';

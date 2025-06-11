@@ -1,10 +1,10 @@
 import { Quiz, Question, QuizType } from '@/types/database.types';
-import DatabaseService from './firebase/database.service';
+import DatabaseService, { DifficultyLevel } from './firebase/database.service';
 import { GamificationService } from './gamification.service';
 
 interface QuizGenerationOptions {
   concepts: string[];
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  difficulty: DifficultyLevel;
   questionCount: number;
   type: QuizType;
   philosopherContext?: string;
@@ -20,21 +20,21 @@ interface QuizReward {
 export class QuizService {
   private gamificationService = new GamificationService();
 
-  //Generuj na podstawie zaawansowania
+  // Dynamiczny quiz na bazie progresu
   async generateAdaptiveQuiz(
     userId: string,
     lessonId: string,
     options: Partial<QuizGenerationOptions> = {}
   ): Promise<Quiz> {
-    // Pobierz ostatnie wyniki
+    // Pobierz wyniki
     const userStats = await this.getUserQuizStats(userId);
     const difficulty = await this.calculateAdaptiveDifficulty(userId, userStats);
     
     // Pobierz dane lekcji
     const lesson = await DatabaseService.getLesson(lessonId);
-    if (!lesson) throw new Error('Lekcja nie znaleziona');
+    if (!lesson) throw new Error('Lekcji brak');
 
-    // Generuj na bazie trudności i koncepcji
+    // Generuj na bazie koncepcji i poziomu
     const questions = await this.generateQuestions({
       concepts: lesson.philosophicalConcepts,
       difficulty: difficulty.level,
@@ -43,7 +43,7 @@ export class QuizService {
       philosopherContext: options.philosopherContext,
     });
 
-    // Quiz z dynamicznym wynikiem zdawania
+    // Dynamiczne wyniki zaliczenia
     const passingScore = this.calculatePassingScore(difficulty.level, questions);
 
     return {
@@ -62,8 +62,17 @@ export class QuizService {
     concept: string,
     philosophicalSchools: string[]
   ): Promise<Question> {
-    // Scenariusze predefiniowane - można generować też AI
-    const scenarios = {
+    // Typy scenariuszy
+    type ScenarioCategory = 'ethics' | 'epistemology' | 'metaphysics' | 'aesthetics' | 'social' | 'science' | 'mind';
+    
+    interface Scenario {
+      text: string;
+      options: string[];
+      philosophicalContext: string;
+    }
+    
+    // Predefined scenarios for demo - in production, these could be AI-generated
+    const scenarios: Record<ScenarioCategory, Record<string, Scenario>> = {
       ethics: {
         trolleyProblem: {
           text: "Jesteś świadkiem sytuacji: wagonik wymknął się spod kontroli i pędzi w stronę pięciu pracowników na torach. Możesz przestawić zwrotnicę, kierując wagonik na boczny tor, gdzie znajduje się jeden pracownik. Co zrobisz?",
@@ -95,10 +104,107 @@ export class QuizService {
           philosophicalContext: "Alegoria jaskini Platona - natura rzeczywistości i wiedzy",
         },
       },
+      metaphysics: {
+        shipOfTheseus: {
+          text: "Statek Tezeusza jest stopniowo naprawiany - każda deska jest wymieniana na nową. Po wymianie wszystkich części, czy to wciąż ten sam statek?",
+          options: [
+            "Tak, tożsamość obiektu nie zależy od jego części materialnych",
+            "Nie, to zupełnie nowy statek",
+            "To zależy od ciągłości funkcji i formy",
+            "Pytanie nie ma sensu - tożsamość to iluzja",
+          ],
+          philosophicalContext: "Problem tożsamości i ciągłości bytów w czasie",
+        },
+      },
+      aesthetics: {
+        artValue: {
+          text: "Obraz namalowany przez sztuczną inteligencję wygrywa konkurs sztuki. Czy może być uznany za prawdziwe dzieło sztuki?",
+          options: [
+            "Tak, liczy się efekt końcowy, nie proces twórczy",
+            "Nie, sztuka wymaga ludzkiej intencji i emocji",
+            "To zależy od tego, czy wywołuje emocje u odbiorcy",
+            "Pytanie redefiniuje nasze rozumienie sztuki",
+          ],
+          philosophicalContext: "Natura sztuki i rola twórcy w procesie artystycznym",
+        },
+    },
+        social: {
+        veilOfIgnorance: {
+          text: "Projektujesz system społeczny, ale nie wiesz, jaką pozycję w nim zajmiesz - możesz być bogaty lub biedny, zdrowy lub chory, większością lub mniejszością. Jaki system wybierzesz?",
+          options: [
+            "Egalitarny - równy dostęp do zasobów i możliwości dla wszystkich",
+            "Merytokratyczny - nagrody proporcjonalne do wysiłku i talentu",
+            "Libertariański - minimalna ingerencja, maksymalna wolność jednostki",
+            "Utylitarny - maksymalizacja ogólnego dobrostanu społeczeństwa",
+          ],
+          philosophicalContext: "Zasłona niewiedzy Rawlsa - sprawiedliwość jako bezstronność",
+        },
+        paradoxOfTolerance: {
+          text: "Społeczeństwo tolerancyjne akceptuje wszystkie poglądy. Grupa otwarcie głosi nietolerancję i dąży do zniszczenia tolerancji. Czy należy tolerować nietolerancję?",
+          options: [
+            "Tak, tolerancja musi być absolutna, inaczej staje się hipokryzją",
+            "Nie, tolerancja wobec nietolerancji prowadzi do zniszczenia tolerancji",
+            "To zależy od tego, czy nietolerancja przejawia się w działaniach czy tylko słowach",
+            "Należy edukować, nie wykluczać - dialog jest kluczem",
+          ],
+          philosophicalContext: "Paradoks tolerancji Poppera - granice otwartego społeczeństwa",
+        },
+      },
+      science: {
+        laplaceDemon: {
+          text: "Hipotetyczna istota zna położenie i pęd każdej cząstki we wszechświecie. Czy może przewidzieć całą przyszłość, łącznie z twoimi decyzjami?",
+          options: [
+            "Tak, wszechświat jest deterministyczny, wolna wola to iluzja",
+            "Nie, mechanika kwantowa wprowadza fundamentalną nieprzewidywalność",
+            "Nie, świadomość i wolna wola wykraczają poza fizykę",
+            "To pytanie przekracza granice ludzkiego poznania",
+          ],
+          philosophicalContext: "Demon Laplace'a - determinizm, przewidywalność i wolna wola",
+        },
+        galileoChoice: {
+          text: "Twoje badania naukowe dowodzą teorii sprzecznej z dominującym światopoglądem. Publikacja grozi ci ostracyzmem lub gorzej. Co robisz?",
+          options: [
+            "Publikuję - prawda naukowa jest najważniejsza",
+            "Czekam na lepszy moment społeczny do publikacji",
+            "Publikuję anonimowo, chroniąc siebie i rozpowszechniając wiedzę",
+            "Nie publikuję - bezpieczeństwo moje i bliskich jest ważniejsze",
+          ],
+          philosophicalContext: "Konflikt Galileusza - prawda naukowa vs presja społeczna",
+        },
+      },
+      mind: {
+        chineseRoom: {
+          text: "Osoba w pokoju otrzymuje chińskie znaki i według instrukcji układa odpowiedzi, nie znając chińskiego. Czy 'rozumie' chiński?",
+          options: [
+            "Tak, jeśli odpowiedzi są poprawne, to jest rozumienie",
+            "Nie, wykonuje tylko mechaniczne operacje bez zrozumienia",
+            "System jako całość rozumie, nawet jeśli osoba nie rozumie",
+            "Pytanie błędnie definiuje czym jest 'rozumienie'",
+          ],
+          philosophicalContext: "Chiński pokój Searle'a - czy sztuczna inteligencja może naprawdę rozumieć?",
+        },
+        teleporter: {
+          text: "Teleporter skanuje twoje ciało, niszczy je, i odtwarza idealną kopię w innym miejscu. Kopia ma wszystkie twoje wspomnienia. Czy to nadal ty?",
+          options: [
+            "Tak, tożsamość to ciągłość psychologiczna, nie fizyczna",
+            "Nie, oryginalne 'ja' umiera, powstaje tylko kopia",
+            "To zależy od tego, czy świadomość może być przeniesiona",
+            "Pytanie pokazuje, że 'ja' to użyteczna iluzja",
+          ],
+          philosophicalContext: "Problem tożsamości osobowej i ciągłości świadomości",
+        },
+      },
     };
 
-    // Wybierz poprawny scenariusz
-    const scenarioSet = scenarios[concept] || scenarios.ethics;
+    // Type guard
+    const isValidCategory = (c: string): c is ScenarioCategory => {
+      return c in scenarios;
+    };
+
+    // Wybierz konkretny scenariusz
+    const category: ScenarioCategory = isValidCategory(concept) ? concept : 'ethics';
+    const scenarioSet = scenarios[category];
+    
     const scenarioKeys = Object.keys(scenarioSet);
     const selectedKey = scenarioKeys[Math.floor(Math.random() * scenarioKeys.length)];
     const scenario = scenarioSet[selectedKey];
@@ -108,14 +214,14 @@ export class QuizService {
       text: scenario.text,
       type: 'scenario',
       options: scenario.options,
-      correctAnswers: [], // Scenariusze nie mają dobrych odpowiedzi
+      correctAnswers: [], // Brak "poprawnych" odpowiedzi
       explanation: "W dylematach etycznych nie ma jednoznacznie poprawnych odpowiedzi. Liczy się proces myślenia i uzasadnienie wyboru.",
       philosophicalContext: scenario.philosophicalContext,
       points: 20,
     };
   }
 
-  // Performance - nagrody
+  //Kalkulacja nagród n/b wyniku
   async calculateRewards(
     userId: string,
     quizId: string,
@@ -130,7 +236,7 @@ export class QuizService {
     let tickets = 0;
     let philosopherChance = 0;
 
-    // Bonusy
+    // Performance bonus
     if (score >= 90) {
       baseExperience *= 1.5;
       tickets = 2;
@@ -144,7 +250,7 @@ export class QuizService {
       tickets = 1;
     }
 
-    // Bonus czas
+    // Time bonus
     if (quiz.timeLimit && timeSpent < quiz.timeLimit * 0.5) {
       baseExperience *= 1.1;
     }
@@ -162,7 +268,7 @@ export class QuizService {
       baseExperience *= quiz.philosopherBonus.bonusMultiplier;
     }
 
-    // Nagrody
+    // Nagrody możliwe za filozofa
     const possiblePhilosophers = await this.selectRewardPhilosophers(
       quiz.lessonId,
       score,
@@ -189,7 +295,7 @@ export class QuizService {
     philosophicalAlignment: string;
   }> {
     const quiz = await DatabaseService.getQuiz(quizId);
-    if (!quiz) throw new Error('Brak quizu');
+    if (!quiz) throw new Error('Quiz not found');
 
     const analysis = {
       conceptScores: {} as Record<string, number>,
@@ -197,25 +303,24 @@ export class QuizService {
       timePerQuestion: [] as number[],
     };
 
-    // Analiza odpowiedzi
+    // Analiza pytań
     quiz.questions.forEach((question) => {
       const userAnswer = answers[question.id];
       const isCorrect = userAnswer?.sort().join(',') === question.correctAnswers.sort().join(',');
 
-      // Performance
       const concept = question.philosophicalContext;
       if (concept) {
         analysis.conceptScores[concept] = (analysis.conceptScores[concept] || 0) + 
           (isCorrect ? question.points : 0);
       }
 
-      // Wzorce
+      // Wzorce odpowiedzi
       if (question.type === 'scenario') {
         analysis.responsePatterns.push(userAnswer?.[0] || 'no-answer');
       }
     });
 
-    // Siły/słabości
+    // Siły i słabości
     const strengths = Object.entries(analysis.conceptScores)
       .filter(([_, score]) => score > 15)
       .map(([concept]) => concept);
@@ -245,8 +350,9 @@ export class QuizService {
   }
 
   // Helpery
+
   private async getUserQuizStats(userId: string) {
-    // 10 ostatnich rezulatów
+    // 10 ostatnich wyników
     const quizHistory = await DatabaseService.getUserQuizHistory(userId, 10);
     
     return {
@@ -257,20 +363,25 @@ export class QuizService {
   }
 
   private async calculateAdaptiveDifficulty(userId: string, stats: any) {
+    type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced';
+    type DifficultyMultiplier = 0.8 | 1.0 | 1.2;
+    
     const performance = [stats.averageScore];
     const difficultyAdjustment = await this.gamificationService.adjustDifficulty(
       userId,
       performance
     );
 
-    const difficultyMap = {
+    const difficultyMap: Record<DifficultyMultiplier, DifficultyLevel> = {
       0.8: 'beginner',
       1.0: 'intermediate',
       1.2: 'advanced',
-    } as const;
+    };
 
+    const multiplier = difficultyAdjustment.newDifficulty as DifficultyMultiplier;
+    
     return {
-      level: difficultyMap[difficultyAdjustment.newDifficulty] || 'intermediate',
+      level: difficultyMap[multiplier] || 'intermediate',
       multiplier: difficultyAdjustment.newDifficulty,
       reasoning: difficultyAdjustment.reasoning,
     };
@@ -280,13 +391,19 @@ export class QuizService {
     difficulty: string,
     questions: Question[]
   ): number {
-    const baseScore = {
+    type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced';
+    
+    const baseScore: Record<DifficultyLevel, number> = {
       beginner: 60,
       intermediate: 70,
       advanced: 80,
     };
 
-    return baseScore[difficulty] || 70;
+    const isDifficultyLevel = (d: string): d is DifficultyLevel => {
+      return d in baseScore;
+    };
+
+    return isDifficultyLevel(difficulty) ? baseScore[difficulty] : 70;
   }
 
   private calculateTimeLimit(
@@ -305,16 +422,22 @@ export class QuizService {
       advanced: 0.8,
     };
 
+    const isDifficultyLevel = (d: string): d is DifficultyLevel => {
+      return d in difficultyMultiplier;
+    };
+
     const totalTime = questions.reduce((sum, q) => 
       sum + (timePerQuestion[q.type] || 30), 0
     );
 
-    return Math.round(totalTime * (difficultyMultiplier[difficulty] || 1) / 60); // Convert to minutes
+    const multiplier = isDifficultyLevel(difficulty) ? difficultyMultiplier[difficulty] : 1;
+    return Math.round(totalTime * multiplier / 60); // Minuty
   }
 
   private async getPhilosopherBonus(userId: string, concepts: string[]) {
     const userPhilosophers = await DatabaseService.getUserPhilosophers(userId);
-     // Sprawdź zbliżonych filozofów
+    
+    // TBD - mapping filozofów
     const relevantPhilosophers = Object.keys(userPhilosophers).filter(id => {
       // Mock
       return Math.random() > 0.7; // 30% - demo
@@ -337,12 +460,12 @@ export class QuizService {
   ): Promise<string[]> {
     if (Math.random() > chance) return [];
 
-    // Mock data
+    // Mock
     return ['socrates', 'plato'];
   }
 
   private determinePhilosophicalAlignment(patterns: string[]): string {
-    // Wzorce
+    // Mocki
     
     const utilitarian = patterns.filter(p => p.includes('większość')).length;
     const deontological = patterns.filter(p => p.includes('obowiązek')).length;
@@ -377,7 +500,8 @@ export class QuizService {
   private async generateQuestions(
     options: QuizGenerationOptions
   ): Promise<Question[]> {
-    // Mock
+    // Mocki
+    
     const questions: Question[] = [];
     
     for (let i = 0; i < options.questionCount; i++) {

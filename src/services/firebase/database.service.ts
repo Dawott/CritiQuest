@@ -271,7 +271,38 @@ class DatabaseService {
     return Object.values(history).reverse(); // Most recent first
   }
 
+  async getUserQuizHistory(userId: string, limit: number): Promise<QuizHistoryEntry[]> {
+  const snapshot = await this.db
+    .ref(`userProgress/${userId}`)
+    .orderByChild('timestamp')
+    .limitToLast(limit)
+    .once('value');
+  
+  const history = snapshot.val() || {};
+  return Object.entries(history)
+    .map(([quizId, data]: [string, any]) => ({
+      quizId,
+      userId,
+      ...(data as Omit<QuizHistoryEntry, 'quizId' | 'userId'>)
+    }))
+    .sort((a, b) => b.timestamp - a.timestamp);
+}
+
 
 }
 
 export default new DatabaseService();
+
+export interface QuizHistoryEntry {
+  quizId: string;
+  userId: string;
+  score: number;
+  completed: boolean;
+  timeSpent: number;
+  timestamp: number;
+  lessonId?: string;
+  philosopherBonus?: string;
+}
+
+export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced';
+export type DifficultyMultiplier = 0.8 | 1.0 | 1.2;
