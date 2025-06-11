@@ -1,11 +1,12 @@
 import { atom } from 'jotai';
-import { Quiz, Question } from '@/types/database.types';
+import { Quiz, Question, DebateQuestion, DebateResult } from '@/types/database.types';
 
 export interface QuizSession {
   quizId: string;
   quiz: Quiz;
   currentQuestionIndex: number;
   answers: Record<string, string[]>; // questionId -> selected answers
+  debateResults?: Record<string, DebateResult>;
   timeElapsed: number;
   hintsUsed: number;
   philosopherBonus?: {

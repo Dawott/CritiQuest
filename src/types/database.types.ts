@@ -109,7 +109,7 @@ export interface Lesson {
 
 //Typy zadań
 
-export type QuestionType = 'single' | 'multiple' | 'scenario';
+export type QuestionType = 'single' | 'multiple' | 'scenario' | 'debate';
 export type QuizType = 'multiple-choice' | 'scenario' | 'debate';
 
 export interface Question {
@@ -121,6 +121,37 @@ export interface Question {
   explanation: string;
   philosophicalContext: string;
   points: number;
+
+   debateConfig?: {
+    title: string;
+    context: string;
+    question: string; // Główny punkt debaty
+    schools_involved: string[];
+    max_rounds: number;
+    time_per_round?: number;
+    required_philosophers?: string[];
+    audience_segments?: {
+      type: 'academics' | 'students' | 'general_public';
+      size: number;
+      biases: string[];
+    }[];
+  };
+}
+
+export type DebateQuestion = Question & {
+  type: 'debate';
+  debateConfig: NonNullable<Question['debateConfig']>;
+};
+
+export interface DebateArgument {
+  id: string;
+  text: string;
+  philosophical_basis: string;
+  strength_against: string[];
+  weakness_against: string[];
+  school_bonus: string[];
+  conviction_power: number;
+  requires_philosopher?: string; // Opcjonalnie
 }
 
 export interface Quiz {
@@ -145,6 +176,15 @@ export interface DatabaseSchema {
   achievements: Record<string, Achievement>;
   // Kolejne w przyszłości
 }
+
+export interface DebateResult {
+  winner: 'user' | 'opponent';
+  totalRounds: number;
+  conviction_score: number;
+  learning_insights: string[];
+  philosophical_growth: { concept: string; understanding: number }[];
+}
+
 
 //Helper do firebase'a
 export type DatabasePath = 

@@ -17,13 +17,13 @@ import { useAtom } from 'jotai';
 import { currentUserAtom } from '@/store/atoms';
 import { quizSessionAtom, quizProgressAtom, quizTimerAtom } from '@/store/quizAtoms';
 import DatabaseService from '@/services/firebase/database.service';
-import { Quiz, Question, QuizType } from '@/types/database.types';
+import { Quiz, Question, QuizType, DebateQuestion, Philosopher } from '@/types/database.types';
 
 // Components
 import QuizTimer from '@/components/quiz/QuizTimer';
 import QuestionCard from '@/components/quiz/QuestionCard';
 import ScenarioCard from '@/components/quiz/ScenarioCard';
-import DebateCard from '@/components/quiz/DebateCard';
+import DebateCard from '@/components/quiz/DebateCard.tsx';
 import QuizResults from '@/components/quiz/QuizResults';
 import PhilosopherHelper from '@/components/quiz/PhilosopherHelper';
 
@@ -211,12 +211,164 @@ export default function QuizScreen() {
     setShowResults(true);
   };
 
+  const getSelectedTeam = useCallback(async (): Promise<Philosopher[]> => {
+  if (!user?.philosopherCollection) return [];
+  
+  try {
+    const ownedPhilosopherIds = Object.keys(user.philosopherCollection);
+    
+    if (ownedPhilosopherIds.length === 0) {
+      return [{
+        id: 'default_socrates',
+        name: 'Sokrates',
+        school: 'Filozofia Klasyczna', 
+        era: 'Starożytność',
+        rarity: 'common',
+        stats: {
+          logic: 75,
+          ethics: 80,
+          metaphysics: 70,
+          epistemology: 90,
+          aesthetics: 60,
+          mind: 85,
+          language: 80,
+          science: 50,
+          social: 75,
+        },
+        avatar: '🏛️',
+        signature_argument: 'Wiem, że nic nie wiem',
+      }];
+    }
+    
+    const firstPhilosopherId = ownedPhilosopherIds[0];
+    const ownedPhilosopher = user.philosopherCollection[firstPhilosopherId];
+    
+    const fullPhilosopherData = await DatabaseService.getPhilosopher(firstPhilosopherId);
+    
+    if (fullPhilosopherData) {
+      return [{
+        ...fullPhilosopherData,
+        id: firstPhilosopherId,
+        stats: ownedPhilosopher.stats,
+      }];
+    }
+    
+    return [{
+      id: firstPhilosopherId,
+      name: getPhilosopherNameFallback(firstPhilosopherId),
+      school: ownedPhilosopher.school || 'Nieznana Szkoła',
+      era: 'Era Filozoficzna',
+      rarity: 'common',
+      stats: ownedPhilosopher.stats,
+      avatar: '🏛️',
+      signature_argument: 'Filozoficzny argument',
+    }];
+    
+  } catch (error) {
+    console.error('Error fetching philosopher data:', error);
+    
+    return [{
+      id: 'error_default',
+      name: 'Domyślny Filozof',
+      school: 'Ogólna Filozofia',
+      era: 'Współczesność',
+      rarity: 'common',
+      stats: {
+        logic: 60,
+        ethics: 60,
+        metaphysics: 60,
+        epistemology: 60,
+        aesthetics: 60,
+        mind: 60,
+        language: 60,
+        science: 60,
+        social: 60,
+      },
+      avatar: '🎓',
+      signature_argument: 'Myślenie krytyczne',
+    }];
+  }
+}, [user]);
+
+const getPhilosopherNameFallback = (philosopherId: string): string => {
+  const nameMap: Record<string, string> = {
+    'socrates': 'Sokrates',
+    'plato': 'Platon',
+    'aristotle': 'Arystoteles', 
+    'kant': 'Immanuel Kant',
+    'nietzsche': 'Friedrich Nietzsche',
+    'descartes': 'René Descartes',
+    'hume': 'David Hume',
+    'spinoza': 'Baruch Spinoza',
+    'wittgenstein': 'Ludwig Wittgenstein',
+    'sartre': 'Jean-Paul Sartre',
+    'beauvoir': 'Simone de Beauvoir',
+    'foucault': 'Michel Foucault',
+    'mill': 'John Stuart Mill',
+    'rawls': 'John Rawls',
+    'nozick': 'Robert Nozick',
+  };
+  
+  return nameMap[philosopherId] || 'Filozof';
+};
+
+const handleDebateResult = useCallback((questionId: string, result: DebateResult) => {
+  if (!session) return;
+  const score = result.conviction_score;
+  const isWinner = result.winner === 'user';
+  
+  const earnedPoints = Math.round((score / 100) * (session.quiz.questions[session.currentQuestionIndex].points || 50));
+
+  setProgress(prev => ({
+    questionsAnswered: prev.questionsAnswered + 1,
+    correctStreak: isWinner ? prev.correctStreak + 1 : 0,
+    criticalThinkingScore: prev.criticalThinkingScore + earnedPoints,
+  }));
+
+  setSession(prev => {
+    if (!prev) return prev;
+    
+    return {
+      ...prev,
+      answers: {
+        ...prev.answers,
+        [questionId]: [result.winner],
+      },
+      debateResults: {
+        ...prev.debateResults,
+        [questionId]: result,
+      },
+    };
+  });
+  
+  setTimeout(() => {
+    if (session.currentQuestionIndex < session.quiz.questions.length - 1) {
+      nextQuestion();
+    } else {
+      finishQuiz();
+    }
+  }, 2000);
+}, [session, nextQuestion, finishQuiz]);
+
+
   const renderQuizContent = () => {
     if (!session || loading) return null;
     
     const currentQuestion = session.quiz.questions[session.currentQuestionIndex];
     
     switch (session.quiz.type) {
+      case 'debate':
+      if (currentQuestion.type === 'debate' && currentQuestion.debateConfig) {
+        return (
+          <DebateCard
+            question={currentQuestion as DebateQuestion}
+            userPhilosophers={getSelectedTeam()}
+            onAnswer={handleDebateResult}
+            philosopherBonus={session.philosopherBonus}
+          />
+        );
+      }
+      return null;
       case 'multiple-choice':
         return (
           <QuestionCard
@@ -235,16 +387,6 @@ export default function QuizScreen() {
             philosopherContext={session.philosopherBonus}
           />
         );
-      
-      case 'debate':
-        return (
-          <DebateCard
-            topic={currentQuestion}
-            onArgument={handleAnswer}
-            philosophers={user?.philosopherCollection || {}}
-          />
-        );
-      
       default:
         return null;
     }

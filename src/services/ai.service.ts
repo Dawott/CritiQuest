@@ -50,7 +50,8 @@ async generatePhilosophicalDebate(
 
     return this.parseDebate(completion.choices[0].message.content);
 
-  }
+  };
+
   /*
 
   // Spersonalizowane pytania
