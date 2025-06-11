@@ -17,7 +17,7 @@ import { useAtom } from 'jotai';
 import { currentUserAtom } from '@/store/atoms';
 import { quizSessionAtom, quizProgressAtom, quizTimerAtom } from '@/store/quizAtoms';
 import DatabaseService from '@/services/firebase/database.service';
-import { Quiz, Question, QuizType, DebateQuestion, Philosopher } from '@/types/database.types';
+import { Quiz, Question, QuizType, DebateQuestion, Philosopher, DebateResult } from '@/types/database.types';
 
 // Components
 import QuizTimer from '@/components/quiz/QuizTimer';
@@ -26,8 +26,10 @@ import ScenarioCard from '@/components/quiz/ScenarioCard';
 import DebateCard from '@/components/quiz/DebateCard.tsx';
 import QuizResults from '@/components/quiz/QuizResults';
 import PhilosopherHelper from '@/components/quiz/PhilosopherHelper';
+import { useSelectedPhilosophers } from '@/hooks/selectedPhilosophers';
 
 const { width, height } = Dimensions.get('window');
+const { selectedPhilosophers, loading: philosophersLoading } = useSelectedPhilosophers(user);
 
 export default function QuizScreen() {
   const route = useRoute();
@@ -210,7 +212,7 @@ export default function QuizScreen() {
     
     setShowResults(true);
   };
-
+/*
   const getSelectedTeam = useCallback(async (): Promise<Philosopher[]> => {
   if (!user?.philosopherCollection) return [];
   
@@ -311,7 +313,7 @@ const getPhilosopherNameFallback = (philosopherId: string): string => {
   
   return nameMap[philosopherId] || 'Filozof';
 };
-
+*/
 const handleDebateResult = useCallback((questionId: string, result: DebateResult) => {
   if (!session) return;
   const score = result.conviction_score;
@@ -362,7 +364,7 @@ const handleDebateResult = useCallback((questionId: string, result: DebateResult
         return (
           <DebateCard
             question={currentQuestion as DebateQuestion}
-            userPhilosophers={getSelectedTeam()}
+            userPhilosophers={selectedPhilosophers}
             onAnswer={handleDebateResult}
             philosopherBonus={session.philosopherBonus}
           />
