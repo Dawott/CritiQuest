@@ -20,12 +20,12 @@ import DatabaseService from '@/services/firebase/database.service';
 import { Quiz, Question, QuizType, DebateQuestion, Philosopher, DebateResult } from '@/types/database.types';
 
 // Components
-import QuizTimer from '@/components/quiz/QuizTimer';
+//import QuizTimer from '@/components/quiz/QuizTimer';
 import QuestionCard from '@/components/quiz/QuestionCard';
 import ScenarioCard from '@/components/quiz/ScenarioCard';
 import DebateCard from '@/components/quiz/DebateCard.tsx';
 import QuizResults from '@/components/quiz/QuizResults';
-import PhilosopherHelper from '@/components/quiz/PhilosopherHelper';
+import PhilosopherHelper from '@/components/quiz/PhilosopherHelper.tsx';
 import { useSelectedPhilosophers, DebatePhilosopher } from '@/hooks/selectedPhilosophers';
 
 const { width, height } = Dimensions.get('window');
@@ -383,7 +383,7 @@ const handleDebateResult = useCallback((questionId: string, result: DebateResult
             </View>
           </View>
           
-          {session?.quiz.timeLimit && <QuizTimer limit={session.quiz.timeLimit} />}
+          {/*{session?.quiz.timeLimit && <QuizTimer limit={session.quiz.timeLimit} />}*/}
         </View>
 
         {/* Progress Bar */}

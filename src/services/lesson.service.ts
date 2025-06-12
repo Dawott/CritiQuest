@@ -1,6 +1,6 @@
 import admin from 'firebase-admin';
 import axios from 'axios';
-import { Lesson, LessonProgress } from '@/types/database.types';
+import { Lesson, LessonWithId } from '@/types/database.types';
 import { ValidationService } from '../utils/validation';
 
 export class LessonService {
@@ -13,52 +13,61 @@ export class LessonService {
   async getLessons(userId: string, options?: {
     stage?: string;
     includeExternal?: boolean;
-  }): Promise<Lesson[]> {
-    const lessons: Lesson[] = [];
+  }): Promise<LessonWithId[]> {
+    const lessons: LessonWithId[] = [];
     
-    // 1. Pobierz lekcje z FB
     const internalLessons = await this.getInternalLessons(options?.stage);
     lessons.push(...internalLessons);
     
-    // 2. Pobierz zewnętrzne - opcjonalnie
     if (options?.includeExternal) {
       try {
         const externalLessons = await this.getExternalLessons();
         lessons.push(...externalLessons);
       } catch (error) {
-        console.error('Błąd podczas pobierania lekcji:', error);
-        // kontynuuj z wewnętrznymi
+        console.error('Błąd pobierania zewnętrznych:', error);
+        // Internal only
       }
     }
     
-    // 3. Progress
     const enrichedLessons = await this.enrichWithProgress(lessons, userId);
     
     return enrichedLessons;
   }
+  
 
 //Firebase
-  private async getInternalLessons(stage?: string): Promise<Lesson[]> {
-    let query = this.db.ref('lessons');
-    
-    if (stage) {
-      query = query.orderByChild('stage').equalTo(stage);
-    }
-    
-    const snapshot = await query.once('value');
-    const lessonsData = snapshot.val() || {};
-    
-    return Object.entries(lessonsData).map(([id, lesson]) => ({
-      id,
-      ...(lesson as Lesson),
-      source: 'internal',
-    }));
-  }
+  private async getInternalLessons(stage?: string): Promise<LessonWithId[]> {
+    try {
+      let snapshot;
+      
+      if (stage) {
+        snapshot = await this.db.ref('lessons')
+          .orderByChild('stage')
+          .equalTo(stage)
+          .once('value');
+      } else {
+        snapshot = await this.db.ref('lessons')
+          .orderByChild('order')
+          .once('value');
+      }
+      
+      const lessonsData = snapshot.val() || {};
+      
+      const lessons: LessonWithId[] = Object.entries(lessonsData).map(([id, lesson]) => ({
+        ...lesson as Lesson,
+        id,
+        source: 'internal' as const,
+      }));
 
-  /**
-   * OPCJONALNIE - Zewnętrzny dostawca
-   */
-  private async getExternalLessons(): Promise<Lesson[]> {
+      return lessons.sort((a, b) => a.order - b.order);
+      
+    } catch (error) {
+      console.error('Błąd fetchowania wewnętrznych lekcji:', error);
+      return [];
+    }
+  }
+  //OPCJONALNIE - Zewnętrzny dostawca
+  private async getExternalLessons(): Promise<LessonWithId[]> {
     try {
       const response = await this.externalApiClient.get('/lessons', {
         params: {
@@ -77,7 +86,7 @@ export class LessonService {
   /**
    * Transformata
    */
-  private transformExternalLessons(externalData: any[]): Lesson[] {
+  private transformExternalLessons(externalData: any[]): LessonWithId[] {
     return externalData.map(item => ({
       id: `external_${item.id}`,
       title: item.title,
@@ -212,7 +221,7 @@ export class LessonService {
   }
 
   // Helpery
-  private async getLesson(lessonId: string): Promise<Lesson | null> {
+ async getLesson(lessonId: string): Promise<Lesson | null> {
     const snapshot = await this.db.ref(`lessons/${lessonId}`).once('value');
     return snapshot.val();
   }
@@ -222,7 +231,7 @@ export class LessonService {
     return snapshot.val() || {};
   }
 
-  private async enrichWithProgress(lessons: Lesson[], userId: string): Promise<Lesson[]> {
+  private async enrichWithProgress(lessons: LessonWithId[], userId: string): Promise<LessonWithId[]> {
     const userProgress = await this.getUserProgress(userId);
     
     return lessons.map(lesson => ({
@@ -304,5 +313,36 @@ export class LessonService {
   private async trackAnalytics(data: any): Promise<void> {
     // Tracking analityki
     console.log('Analiza:', data);
+  }
+
+  async getFeaturedLessons(): Promise<LessonWithId[]> {
+    try {
+      const snapshot = await this.db.ref('lessons')
+        .orderByChild('order')
+        .limitToFirst(6)
+        .once('value');
+      
+      const lessonsData = snapshot.val() || {};
+      
+      const lessons: LessonWithId[] = Object.entries(lessonsData).map(([id, lesson]) => ({
+        ...lesson as Lesson,
+        id,
+        source: 'internal',
+      }));
+
+      const featuredLessons = lessons.filter(lesson => 
+        lesson.difficulty === 'beginner' || 
+        lesson.stage === 'introduction' ||
+        lesson.order <= 3
+      );
+
+      return featuredLessons
+        .sort((a, b) => a.order - b.order)
+        .slice(0, 4);
+        
+    } catch (error) {
+      console.error('Błąd przy pobieraniu lekcji featured:', error);
+      return [];
+    }
   }
 }

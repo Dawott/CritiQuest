@@ -107,6 +107,11 @@ export interface Lesson {
   rewards: LessonRewards;
 }
 
+export interface LessonWithId extends Lesson {
+  id: string;
+  source: 'internal' | 'external';
+}
+
 //Typy zadań
 
 export type QuestionType = 'single' | 'multiple' | 'scenario' | 'debate';
