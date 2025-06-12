@@ -68,15 +68,71 @@ export const QuizSchema = z.object({
   }).optional(),
 });
 
+export const LessonSectionSchema = z.object({
+  type: z.enum(['text', 'interactive', 'video']),
+  content: z.string().min(1),
+  order: z.number().min(0),
+});
+
+export const LessonRewardsSchema = z.object({
+  experience: z.number().min(0).max(1000),
+  gachaTickets: z.number().min(0).max(10),
+});
+
+export const LessonSchema = z.object({
+  id: z.string().optional(), // Opcjonalne
+  title: z.string().min(5).max(200),
+  description: z.string().min(20).max(1000),
+  stage: z.string().min(1),
+  order: z.number().min(1),
+  difficulty: z.enum(['beginner', 'intermediate', 'advanced']),
+  estimatedTime: z.number().min(1).max(180), // 1-180 minut
+  philosophicalConcepts: z.array(z.string()).min(1).max(10),
+  requiredPhilosopher: z.string().optional(),
+  content: z.object({
+    sections: z.array(LessonSectionSchema).min(1),
+  }),
+  quiz: z.string().min(1),
+  rewards: LessonRewardsSchema,
+  source: z.enum(['internal', 'external']).optional(),
+  externalUrl: z.string().url().optional(),
+});
+
+export const UserStatsSchema = z.object({
+  totalTimeSpent: z.number().min(0),
+  streakDays: z.number().min(0),
+  lastStreakUpdate: z.number(),
+  quizzesCompleted: z.number().min(0),
+  perfectScores: z.number().min(0),
+  gachaTickets: z.number().min(0),
+});
+
+export const AchievementSchema = z.object({
+  unlockedAt: z.number(),
+  progress: z.number().min(0).max(100),
+});
+
+export const OwnedPhilosopherSchema = z.object({
+  level: z.number().min(1).max(50),
+  experience: z.number().min(0),
+  duplicates: z.number().min(0),
+  stats: PhilosopherStatsSchema,
+  school: z.string(),
+});
+
+export const UserSchema = z.object({
+  profile: UserProfileSchema,
+  progression: UserProgressionSchema,
+  stats: UserStatsSchema,
+  achievements: z.record(AchievementSchema),
+  philosopherCollection: z.record(OwnedPhilosopherSchema),
+});
+
+
 // Validation helper
 export class ValidationService {
   static validateUser(data: unknown): boolean {
     try {
-      const UserSchema = z.object({
-        profile: UserProfileSchema,
-        progression: UserProgressionSchema,
-        // TBD - dalsze staty usera
-      });
       UserSchema.parse(data);
       return true;
     } catch (error) {
@@ -100,6 +156,105 @@ export class ValidationService {
       return true;
     } catch (error) {
       console.error('Walidacja Quizu nie powiodła się:', error);
+      return false;
+    }
+  }
+
+  static validateLesson(data: unknown): boolean {
+    try {
+      LessonSchema.parse(data);
+      return true;
+    } catch (error) {
+      console.error('Walidacja Lekcji nie powiodła się:', error);
+      return false;
+    }
+  }
+
+  static validateLessonDetailed(data: unknown): {
+    isValid: boolean;
+    errors: string[];
+    sanitizedData?: any;
+  } {
+    try {
+      const validated = LessonSchema.parse(data);
+      return {
+        isValid: true,
+        errors: [],
+        sanitizedData: validated,
+      };
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return {
+          isValid: false,
+          errors: error.errors.map(err => {
+            const path = err.path.join('.');
+            return `${path}: ${err.message}`;
+          }),
+        };
+      }
+      
+      return {
+        isValid: false,
+        errors: ['Nieznany błąd walidacji'],
+      };
+    }
+  }
+
+  static validateLessonCreation(data: unknown): boolean {
+    try {
+      const CreationSchema = LessonSchema.extend({
+        title: z.string().min(10).max(100), 
+        description: z.string().min(50).max(500), 
+        philosophicalConcepts: z.array(z.string()).min(1).max(5), 
+        content: z.object({
+          sections: z.array(LessonSectionSchema).min(1).max(20),
+        }),
+      });
+
+      CreationSchema.parse(data);
+      return true;
+    } catch (error) {
+      console.error('Walidacja tworzenia lekcji nie powiodła się:', error);
+      return false;
+    }
+  }
+
+  static sanitizeUserInput(input: string): string {
+    return input
+      .trim()
+      .replace(/[<>]/g, '') // Remove basic HTML tags
+      .replace(/javascript:/gi, '') // Remove javascript
+      .slice(0, 1000);
+  }
+
+  static validateQuizAnswers(answers: Record<string, string[]>): boolean {
+    try {
+      const AnswersSchema = z.record(
+        z.string(), 
+        z.array(z.string()).min(1).max(10) // 1- 10 odpowiedzi
+      );
+      AnswersSchema.parse(answers);
+      return true;
+    } catch (error) {
+      console.error('Walidacja odpowiedzi quizu nie powiodła się:', error);
+      return false;
+    }
+  }
+
+  static validateProgressionUpdate(data: unknown): boolean {
+    try {
+      const ProgressionUpdateSchema = z.object({
+        level: z.number().min(1).max(100).optional(),
+        experience: z.number().min(0).optional(),
+        currentStage: z.string().optional(),
+        completedLessons: z.array(z.string()).optional(),
+        unlockedPhilosophers: z.array(z.string()).optional(),
+      });
+
+      ProgressionUpdateSchema.parse(data);
+      return true;
+    } catch (error) {
+      console.error('Walidacja aktualizacji postępu nie powiodła się:', error);
       return false;
     }
   }

@@ -1,7 +1,7 @@
 import admin from 'firebase-admin';
 import axios from 'axios';
 import { Lesson, LessonWithId } from '@/types/database.types';
-import { ValidationService } from '../utils/validation';
+import { ValidationService } from '../utils/schemas';
 
 export class LessonService {
   private db = admin.database();
