@@ -9,7 +9,7 @@ import { schema } from './schema.ts';
 import EnhancedLessonService from '../services/lesson.service';
 
 interface YogaContext {
-  user?: admin.auth.DecodedIdToken;
+  user?: admin.auth.DecodedIdToken | null;
   userId?: string;
   services: {
     lessons: typeof EnhancedLessonService;
@@ -18,7 +18,7 @@ interface YogaContext {
   pubsub?: any;
 }
 
-async function getUserFromToken(authorization?: string): Promise<admin.auth.DecodedIdToken | null> {
+async function getUserFromToken(authorization?: string | null): Promise<admin.auth.DecodedIdToken | null> {
   if (!authorization || !authorization.startsWith('Bearer ')) {
     return null;
   }

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { Lesson, LessonWithId } from '@/types/database.types';
 import EnhancedDatabaseService from './firebase/database.service';
 import { DB_PATHS } from '@/config/firebase.config';
+import { getErrorMessage } from '../utils/error.utils';
 
 // Validation schemas using Zod
 const LessonCompletionSchema = z.object({
@@ -97,7 +98,7 @@ export class EnhancedLessonService {
         userProgress,
       };
     } catch (error) {
-      throw new Error(`Nie udało się pobrać lekcji: ${error.message}`);
+      throw new Error(`Nie udało się pobrać lekcji: ${getErrorMessage(error)}`);
     }
   }
 
@@ -112,6 +113,7 @@ export class EnhancedLessonService {
       
       const lessonWithId: LessonWithId = {
         id: lessonId,
+        source: 'internal',
         ...lesson,
       };
       
@@ -127,7 +129,7 @@ export class EnhancedLessonService {
       
       return lessonWithId;
     } catch (error) {
-      throw new Error(`Nie udało się pobrać lekcji: ${error.message}`);
+      throw new Error(`Nie udało się pobrać lekcji: ${getErrorMessage(error)}`);
     }
   }
 
@@ -171,7 +173,7 @@ export class EnhancedLessonService {
         rewards,
       };
     } catch (error) {
-      throw new Error(`Nie udało się zakończyć leckji: ${error.message}`);
+      throw new Error(`Nie udało się zakończyć leckji: ${getErrorMessage(error)}`);
     }
   }
 
@@ -198,7 +200,7 @@ export class EnhancedLessonService {
       
       return recommendations;
     } catch (error) {
-      throw new Error(`Nie udało się pobrać rekomendacji: ${error.message}`);
+      throw new Error(`Nie udało się pobrać rekomendacji: ${getErrorMessage(error)}`);
     }
   }
 
@@ -217,7 +219,7 @@ export class EnhancedLessonService {
         ...lesson,
       })) as LessonWithId[];
     } catch (error) {
-      throw new Error(`Nie udało się pobrać rekomendowanych lekcji: ${error.message}`);
+      throw new Error(`Nie udało się pobrać rekomendowanych lekcji: ${getErrorMessage(error)}`);
     }
   }
 
@@ -233,7 +235,7 @@ export class EnhancedLessonService {
         lastUpdated: analytics?.lastUpdated || null,
       };
     } catch (error) {
-      throw new Error(`Nie udało się pobrać analityki: ${error.message}`);
+      throw new Error(`Nie udało się pobrać analityki: ${getErrorMessage(error)}`);
     }
   }
 
@@ -249,7 +251,7 @@ export class EnhancedLessonService {
       
       return lessonId;
     } catch (error) {
-      throw new Error(`Nie udało się utworzyć lekcji: ${error.message}`);
+      throw new Error(`Nie udało się utworzyć lekcji: ${getErrorMessage(error)}`);
     }
   }
 

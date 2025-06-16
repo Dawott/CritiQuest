@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { z } from 'zod';
 import { AuthRequest } from '../middleware/auth.middleware';
 import EnhancedLessonService from '../services/lesson.service';
+import { getErrorMessage } from '../utils/error.utils';
 
 // Schemy dla requestów
 const QuerySchema = z.object({
@@ -59,7 +60,7 @@ export class EnhancedLessonController {
       res.status(500).json({
         success: false,
         error: 'Nie udało się pobrać lekcji',
-        message: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        message: process.env.NODE_ENV === 'development' ? getErrorMessage(error) : undefined,
       });
     }
   };
@@ -96,7 +97,7 @@ export class EnhancedLessonController {
       res.status(500).json({
         success: false,
         error: 'Nie udało się pobrać lekcji',
-        message: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        message: process.env.NODE_ENV === 'development' ? getErrorMessage(error) : undefined,
       });
     }
   };
@@ -136,7 +137,7 @@ export class EnhancedLessonController {
     } catch (error) {
       console.error('Błąd zakończenia lekcji:', error);
       
-      if (error.message.includes('not found')) {
+      if (getErrorMessage(error).includes('not found')) {
         res.status(404).json({
           success: false,
           error: 'Lekcja nieodnaleziona',
@@ -147,7 +148,7 @@ export class EnhancedLessonController {
       res.status(500).json({
         success: false,
         error: 'Nie udało się zakończyć lekcji',
-        message: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        message: process.env.NODE_ENV === 'development' ? getErrorMessage(error) : undefined,
       });
     }
   };
@@ -167,7 +168,7 @@ export class EnhancedLessonController {
       res.status(500).json({
         success: false,
         error: 'Błąd pobierania rekomendacji',
-        message: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        message: process.env.NODE_ENV === 'development' ? getErrorMessage(error) : undefined,
       });
     }
   };
@@ -198,7 +199,7 @@ export class EnhancedLessonController {
       res.status(500).json({
         success: false,
         error: 'Nie udało się pobrać featured',
-        message: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        message: process.env.NODE_ENV === 'development' ? getErrorMessage(error) : undefined,
       });
     }
   };
@@ -219,7 +220,7 @@ export class EnhancedLessonController {
       res.status(500).json({
         success: false,
         error: 'Failed to get lesson analytics',
-        message: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        message: process.env.NODE_ENV === 'development' ? getErrorMessage(error) : undefined,
       });
     }
   };
@@ -248,7 +249,7 @@ export class EnhancedLessonController {
       res.status(500).json({
         success: false,
         error: 'Błąd utworzenia lekcji',
-        message: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        message: process.env.NODE_ENV === 'development' ? getErrorMessage(error) : undefined,
       });
     }
   };

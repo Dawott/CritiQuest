@@ -4,12 +4,13 @@ import { GraphQLContext } from './context';
 
 export const resolvers = {
    Query: {
+
+
     lessons: async (parent: any, args: any, context: GraphQLContext) => {
       if (!context.user) {
         throw new Error('Authentication required');
       }
       
-      // NEW: Direct service access
       const result = await context.services.lessons.getLessons(
         context.userId!,
         args.filters || {},
@@ -20,7 +21,8 @@ export const resolvers = {
     },
 
     lesson: async (parent: any, args: any, context: GraphQLContext) => {
-      return context.services.lessons.getLesson(args.id, context.userId);
+      const lesson = await context.services.lessons.getLesson(args.id, context.userId);
+      return lesson;
     },
 
     recommendations: async (parent: any, args: any, context: GraphQLContext) => {

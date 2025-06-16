@@ -107,10 +107,25 @@ export interface Lesson {
   rewards: LessonRewards;
 }
 
+export interface LessonProgress {
+  completedAt: number;
+  score: number;
+  timeSpent: number;
+  notes?: string;
+  attempts?: number;
+  bestScore?: number;
+}
+
 export interface LessonWithId extends Lesson {
   id: string;
   source: 'internal' | 'external';
+  userProgress?: LessonProgress | null;
+  isCompleted?: boolean;
+  featured?: boolean;
+  createdAt?: number;
+  updatedAt?: number;
 }
+
 
 //Typy zadań
 
