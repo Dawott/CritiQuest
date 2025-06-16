@@ -1,348 +1,310 @@
-import admin from 'firebase-admin';
-import axios from 'axios';
+import { z } from 'zod';
 import { Lesson, LessonWithId } from '@/types/database.types';
-import { ValidationService } from '../utils/schemas';
+import EnhancedDatabaseService from './firebase/database.service';
+import { DB_PATHS } from '@/config/firebase.config';
 
-export class LessonService {
-  private db = admin.database();
-  private externalApiClient = axios.create({
-    baseURL: process.env.EXTERNAL_API_URL,
-    timeout: 10000,
-  });
+// Validation schemas using Zod
+const LessonCompletionSchema = z.object({
+  score: z.number().min(0).max(100),
+  timeSpent: z.number().min(0),
+  notes: z.string().optional(),
+});
 
-  async getLessons(userId: string, options?: {
-    stage?: string;
-    includeExternal?: boolean;
-  }): Promise<LessonWithId[]> {
-    const lessons: LessonWithId[] = [];
-    
-    const internalLessons = await this.getInternalLessons(options?.stage);
-    lessons.push(...internalLessons);
-    
-    if (options?.includeExternal) {
-      try {
-        const externalLessons = await this.getExternalLessons();
-        lessons.push(...externalLessons);
-      } catch (error) {
-        console.error('Błąd pobierania zewnętrznych:', error);
-        // Internal only
-      }
-    }
-    
-    const enrichedLessons = await this.enrichWithProgress(lessons, userId);
-    
-    return enrichedLessons;
-  }
-  
+const LessonQuerySchema = z.object({
+  stage: z.string().optional(),
+  difficulty: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
+  limit: z.number().min(1).max(50).optional(),
+  offset: z.number().min(0).optional(),
+});
 
-//Firebase
-  private async getInternalLessons(stage?: string): Promise<LessonWithId[]> {
+export interface LessonFilters {
+  stage?: string;
+  difficulty?: 'beginner' | 'intermediate' | 'advanced';
+  userId?: string;
+  includeCompleted?: boolean;
+}
+
+export interface PaginationOptions {
+  limit?: number;
+  offset?: number;
+  orderBy?: string;
+  sortDirection?: 'asc' | 'desc';
+}
+
+export class EnhancedLessonService {
+  private db = EnhancedDatabaseService;
+
+  // Pobierz lekcje (z paginacją)
+  async getLessons(
+    userId: string, 
+    filters: LessonFilters = {},
+    pagination: PaginationOptions = {}
+  ): Promise<{
+    lessons: LessonWithId[];
+    total: number;
+    hasMore: boolean;
+    userProgress: Record<string, any>;
+  }> {
     try {
-      let snapshot;
+      // walidacja
+      const validatedQuery = LessonQuerySchema.parse(filters);
       
-      if (stage) {
-        snapshot = await this.db.ref('lessons')
-          .orderByChild('stage')
-          .equalTo(stage)
-          .once('value');
-      } else {
-        snapshot = await this.db.ref('lessons')
-          .orderByChild('order')
-          .once('value');
-      }
+      const { limit = 20, offset = 0 } = pagination;
       
-      const lessonsData = snapshot.val() || {};
+      // User progress z filtrem
+      const userProgress = await this.db.read<Record<string, any>>(
+        `${DB_PATHS.USER_PROGRESS}/${userId}`
+      ) || {};
       
-      const lessons: LessonWithId[] = Object.entries(lessonsData).map(([id, lesson]) => ({
-        ...lesson as Lesson,
+      const completedLessons = await this.getUserCompletedLessons(userId);
+      
+      // query lekcji
+      let lessonsQuery = await this.db.query<Lesson>(
+        DB_PATHS.LESSONS,
+        'order',
+        undefined,
+        undefined
+      );
+      
+      let lessons = Object.entries(lessonsQuery).map(([id, lesson]) => ({
         id,
-        source: 'internal' as const,
-      }));
-
-      return lessons.sort((a, b) => a.order - b.order);
+        ...lesson,
+      })) as LessonWithId[];
       
+      // filtry
+      if (filters.stage) {
+        lessons = lessons.filter(lesson => lesson.stage === filters.stage);
+      }
+      
+      if (filters.difficulty) {
+        lessons = lessons.filter(lesson => lesson.difficulty === filters.difficulty);
+      }
+      
+      if (!filters.includeCompleted) {
+        lessons = lessons.filter(lesson => !completedLessons.includes(lesson.id));
+      }
+      
+      // paginacja
+      const total = lessons.length;
+      const paginatedLessons = lessons.slice(offset, offset + limit);
+      
+      const enrichedLessons = await this.enrichLessonsWithProgress(paginatedLessons, userId);
+      
+      return {
+        lessons: enrichedLessons,
+        total,
+        hasMore: offset + limit < total,
+        userProgress,
+      };
     } catch (error) {
-      console.error('Błąd fetchowania wewnętrznych lekcji:', error);
-      return [];
+      throw new Error(`Nie udało się pobrać lekcji: ${error.message}`);
     }
   }
-  //OPCJONALNIE - Zewnętrzny dostawca
-  private async getExternalLessons(): Promise<LessonWithId[]> {
+
+  // Pobierz jedną lekcję
+  async getLesson(lessonId: string, userId?: string): Promise<LessonWithId | null> {
     try {
-      const response = await this.externalApiClient.get('/lessons', {
-        params: {
-          category: 'philosophy',
-          language: 'pl',
-        },
+      const lesson = await this.db.read<Lesson>(`${DB_PATHS.LESSONS}/${lessonId}`);
+      
+      if (!lesson) {
+        return null;
+      }
+      
+      const lessonWithId: LessonWithId = {
+        id: lessonId,
+        ...lesson,
+      };
+      
+      // Dodaj user-specific
+      if (userId) {
+        const userProgress = await this.db.read<any>(
+          `${DB_PATHS.USER_PROGRESS}/${userId}/${lessonId}`
+        );
+        
+        lessonWithId.userProgress = userProgress;
+        lessonWithId.isCompleted = !!userProgress;
+      }
+      
+      return lessonWithId;
+    } catch (error) {
+      throw new Error(`Nie udało się pobrać lekcji: ${error.message}`);
+    }
+  }
+
+  // tracking
+  async completeLesson(
+    userId: string, 
+    lessonId: string, 
+    completionData: z.infer<typeof LessonCompletionSchema>
+  ): Promise<{
+    success: boolean;
+    experienceGained: number;
+    levelUp?: {
+      newLevel: number;
+      leveledUp: boolean;
+    };
+    rewards?: string[];
+  }> {
+    try {
+      // dane zakończenia
+      const validatedData = LessonCompletionSchema.parse(completionData);
+      
+      // sprawdzenie czy lekcja istnieje
+      const lesson = await this.getLesson(lessonId);
+      if (!lesson) {
+        throw new Error('Lekcja nieodnaleziona');
+      }
+      
+      // Oblicz doświadczenie
+      const baseExperience = this.calculateExperience(lesson, validatedData.score);
+      
+      await this.db.completeLessonWithProgress(userId, lessonId, validatedData);
+      
+      const levelUpResult = await this.db.addExperienceWithLevelUp(userId, baseExperience);
+      
+      const rewards = await this.generateCompletionRewards(lesson, validatedData.score);
+      
+      return {
+        success: true,
+        experienceGained: baseExperience,
+        levelUp: levelUpResult.leveledUp ? levelUpResult : undefined,
+        rewards,
+      };
+    } catch (error) {
+      throw new Error(`Nie udało się zakończyć leckji: ${error.message}`);
+    }
+  }
+
+  // otrzymaj rekomendacje
+  async getRecommendations(userId: string): Promise<LessonWithId[]> {
+    try {
+      const user = await this.db.read<any>(`${DB_PATHS.USERS}/${userId}`);
+      if (!user) throw new Error('User nieodnaleziony');
+      
+      const completedLessons = user.progression.completedLessons || [];
+      const currentStage = user.progression.currentStage;
+      
+      // Pobierz lekcje dla niezakończonych
+      const stageLessons = await this.db.query<Lesson>(
+        DB_PATHS.LESSONS,
+        'stage',
+        currentStage,
+        5
+      );
+      
+      const recommendations = Object.entries(stageLessons)
+        .filter(([id]) => !completedLessons.includes(id))
+        .map(([id, lesson]) => ({ id, ...lesson })) as LessonWithId[];
+      
+      return recommendations;
+    } catch (error) {
+      throw new Error(`Nie udało się pobrać rekomendacji: ${error.message}`);
+    }
+  }
+
+  // pobierz polecane lekcje
+  async getFeaturedLessons(limit: number = 10): Promise<LessonWithId[]> {
+    try {
+      const featuredLessons = await this.db.query<Lesson>(
+        DB_PATHS.LESSONS,
+        'featured',
+        true,
+        limit
+      );
+      
+      return Object.entries(featuredLessons).map(([id, lesson]) => ({
+        id,
+        ...lesson,
+      })) as LessonWithId[];
+    } catch (error) {
+      throw new Error(`Nie udało się pobrać rekomendowanych lekcji: ${error.message}`);
+    }
+  }
+
+  // pobierz analitykę
+  async getLessonAnalytics(lessonId: string): Promise<any> {
+    try {
+      const analytics = await this.db.read<any>(`${DB_PATHS.ANALYTICS}/lessons/${lessonId}`);
+      
+      return {
+        completions: analytics?.completions || 0,
+        averageScore: analytics?.averageScore || 0,
+        averageTime: analytics?.averageTime || 0,
+        lastUpdated: analytics?.lastUpdated || null,
+      };
+    } catch (error) {
+      throw new Error(`Nie udało się pobrać analityki: ${error.message}`);
+    }
+  }
+
+  // Twórz lekcję
+  async createLesson(lessonData: Omit<Lesson, 'id'>): Promise<string> {
+    try {
+      // waliduj lekcję, gdy potrzeba
+      const lessonId = await this.db.create(DB_PATHS.LESSONS, {
+        ...lessonData,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
       });
       
-      // Transformata
-      return this.transformExternalLessons(response.data);
+      return lessonId;
     } catch (error) {
-      throw new Error('Zewnętrzny dostawca zawiódł');
+      throw new Error(`Nie udało się utworzyć lekcji: ${error.message}`);
     }
   }
 
-  /**
-   * Transformata
-   */
-  private transformExternalLessons(externalData: any[]): LessonWithId[] {
-    return externalData.map(item => ({
-      id: `external_${item.id}`,
-      title: item.title,
-      description: item.description,
-      stage: this.mapExternalStage(item.level),
-      order: 999, // Lekcje zewnętrzne
-      difficulty: this.mapExternalDifficulty(item.difficulty),
-      estimatedTime: item.duration || 20,
-      philosophicalConcepts: item.tags || [],
-      content: {
-        sections: this.transformContent(item.content),
-      },
-      quiz: item.quizId,
-      rewards: {
-        experience: 50,
-        gachaTickets: 1,
-      },
-      source: 'external',
-      externalUrl: item.url,
-    }));
+  // Private helper
+  private async getUserCompletedLessons(userId: string): Promise<string[]> {
+    const user = await this.db.read<any>(`${DB_PATHS.USERS}/${userId}`);
+    return user?.progression?.completedLessons || [];
   }
 
-  /**
-   * Utwórz nową lekcję - do wdrożenia
-   */
-  async createLesson(lessonData: Partial<Lesson>): Promise<string> {
-    // Walidacja
-    if (!ValidationService.validateLesson(lessonData)) {
-      throw new Error('Błędne dane');
-    }
-    
-    const newLessonRef = this.db.ref('lessons').push();
-    await newLessonRef.set({
-      ...lessonData,
-      createdAt: admin.database.ServerValue.TIMESTAMP,
-    });
-    
-    return newLessonRef.key!;
-  }
-
-  /*Do wdrożenia - AI do rekomendacji
-   */
-  async getRecommendations(userId: string): Promise<Lesson[]> {
-    // Historia lekcji
-    const userProgress = await this.getUserProgress(userId);
-    
-    // Pobierz kolekcję
-    const userSnapshot = await this.db.ref(`users/${userId}`).once('value');
-    const userData = userSnapshot.val();
-    
-    // Prosty algo do rekomendacji
-    const recommendations = await this.calculateRecommendations({
-      completedLessons: userProgress,
-      userLevel: userData?.progression?.level || 1,
-      philosopherCollection: userData?.philosopherCollection || {},
-    });
-    
-    return recommendations;
-  }
-
-  /*Analityka
-   */
-  async completeLesson(userId: string, lessonId: string, data: {
-    score: number;
-    timeSpent: number;
-    notes?: string;
-  }): Promise<void> {
-    const updates: Record<string, any> = {};
-    
-    // Update postępu
-    updates[`users/${userId}/progression/completedLessons/${lessonId}`] = true;
-    
-    // Detale
-    updates[`userProgress/${userId}/${lessonId}`] = {
-      completedAt: admin.database.ServerValue.TIMESTAMP,
-      score: data.score,
-      timeSpent: data.timeSpent,
-      notes: data.notes || null,
-    };
-    
-    // Nagrody
-    const lesson = await this.getLesson(lessonId);
-    if (lesson) {
-      updates[`users/${userId}/progression/experience`] = 
-        admin.database.ServerValue.increment(lesson.rewards.experience);
-      updates[`users/${userId}/stats/gachaTickets`] = 
-        admin.database.ServerValue.increment(lesson.rewards.gachaTickets);
-    }
-    
-    // Iwenty
-    await this.trackAnalytics({
-      event: 'lesson_completed',
-      userId,
-      lessonId,
-      score: data.score,
-      timeSpent: data.timeSpent,
-    });
-    
-    await this.db.ref().update(updates);
-  }
-
-//Analityka lekcji
-  async getLessonAnalytics(lessonId: string): Promise<{
-    completionRate: number;
-    averageScore: number;
-    averageTime: number;
-    difficultyRating: number;
-  }> {
-    const progressSnapshot = await this.db.ref('userProgress')
-      .orderByChild(lessonId)
-      .once('value');
-    
-    const allProgress = progressSnapshot.val() || {};
-    let totalCompleted = 0;
-    let totalScore = 0;
-    let totalTime = 0;
-    
-    Object.values(allProgress).forEach((userProgress: any) => {
-      if (userProgress[lessonId]) {
-        totalCompleted++;
-        totalScore += userProgress[lessonId].score || 0;
-        totalTime += userProgress[lessonId].timeSpent || 0;
-      }
-    });
-    
-    return {
-      completionRate: totalCompleted,
-      averageScore: totalCompleted > 0 ? totalScore / totalCompleted : 0,
-      averageTime: totalCompleted > 0 ? totalTime / totalCompleted : 0,
-      difficultyRating: this.calculateDifficultyRating(totalScore, totalCompleted),
-    };
-  }
-
-  // Helpery
- async getLesson(lessonId: string): Promise<Lesson | null> {
-    const snapshot = await this.db.ref(`lessons/${lessonId}`).once('value');
-    return snapshot.val();
-  }
-
-  private async getUserProgress(userId: string): Promise<any> {
-    const snapshot = await this.db.ref(`userProgress/${userId}`).once('value');
-    return snapshot.val() || {};
-  }
-
-  private async enrichWithProgress(lessons: LessonWithId[], userId: string): Promise<LessonWithId[]> {
-    const userProgress = await this.getUserProgress(userId);
+  private async enrichLessonsWithProgress(
+    lessons: LessonWithId[], 
+    userId: string
+  ): Promise<LessonWithId[]> {
+    const userProgress = await this.db.read<Record<string, any>>(
+      `${DB_PATHS.USER_PROGRESS}/${userId}`
+    ) || {};
     
     return lessons.map(lesson => ({
       ...lesson,
-      progress: userProgress[lesson.id] || null,
-      isCompleted: !!userProgress[lesson.id]?.completedAt,
-      isLocked: this.checkIfLocked(lesson, userProgress),
+      userProgress: userProgress[lesson.id],
+      isCompleted: !!userProgress[lesson.id],
     }));
   }
 
-  private checkIfLocked(lesson: Lesson, userProgress: any): boolean {
-    // Unlock lekcji
-    if (lesson.order === 1) return false;
-// TBD - do skomplikowania 
-    return false;
-  }
-
-  private mapExternalStage(level: string): string {
-    const mapping: Record<string, string> = {
-      'beginner': 'introduction',
-      'intermediate': 'classical',
-      'advanced': 'modern',
+  private calculateExperience(lesson: Lesson, score: number): number {
+    const baseExp = 50;
+    const difficultyMultiplier = {
+      beginner: 1,
+      intermediate: 1.5,
+      advanced: 2,
     };
-    return mapping[level] || 'introduction';
-  }
-
-  private mapExternalDifficulty(diff: string): 'beginner' | 'intermediate' | 'advanced' {
-    const mapping: Record<string, 'beginner' | 'intermediate' | 'advanced'> = {
-      'easy': 'beginner',
-      'medium': 'intermediate',
-      'hard': 'advanced',
-    };
-    return mapping[diff] || 'beginner';
-  }
-
-  private transformContent(content: any): any[] {
-    // Transformata z zewnątrz
-    if (Array.isArray(content)) {
-      return content.map((item, index) => ({
-        type: item.type || 'text',
-        content: item.text || item.content,
-        order: index,
-      }));
-    }
-    return [{
-      type: 'text',
-      content: content,
-      order: 0,
-    }];
-  }
-
-  private async calculateRecommendations(userData: any): Promise<Lesson[]> {
-    // Logika rekomendacji
-    const allLessons = await this.getInternalLessons();
-    const completedIds = Object.keys(userData.completedLessons || {});
     
-    return allLessons
-      .filter(lesson => !completedIds.includes(lesson.id))
-      .sort((a, b) => {
-        // Priorytetyzacja aktualnego poziomu użytkownika
-        const levelDiff = Math.abs(a.order - userData.userLevel);
-        const levelDiffB = Math.abs(b.order - userData.userLevel);
-        return levelDiff - levelDiffB;
-      })
-      .slice(0, 5);
-  }
-
-  private calculateDifficultyRating(avgScore: number, completions: number): number {
-    if (completions === 0) return 3;
+    const scoreMultiplier = score / 100;
+    const difficulty = lesson.difficulty || 'beginner';
     
-    // Scoring
-    if (avgScore < 50) return 5;
-    if (avgScore < 70) return 4;
-    if (avgScore < 85) return 3;
-    if (avgScore < 95) return 2;
-    return 1;
+    return Math.floor(baseExp * difficultyMultiplier[difficulty] * scoreMultiplier);
   }
 
-  private async trackAnalytics(data: any): Promise<void> {
-    // Tracking analityki
-    console.log('Analiza:', data);
-  }
-
-  async getFeaturedLessons(): Promise<LessonWithId[]> {
-    try {
-      const snapshot = await this.db.ref('lessons')
-        .orderByChild('order')
-        .limitToFirst(6)
-        .once('value');
-      
-      const lessonsData = snapshot.val() || {};
-      
-      const lessons: LessonWithId[] = Object.entries(lessonsData).map(([id, lesson]) => ({
-        ...lesson as Lesson,
-        id,
-        source: 'internal',
-      }));
-
-      const featuredLessons = lessons.filter(lesson => 
-        lesson.difficulty === 'beginner' || 
-        lesson.stage === 'introduction' ||
-        lesson.order <= 3
-      );
-
-      return featuredLessons
-        .sort((a, b) => a.order - b.order)
-        .slice(0, 4);
-        
-    } catch (error) {
-      console.error('Błąd przy pobieraniu lekcji featured:', error);
-      return [];
+  private async generateCompletionRewards(lesson: Lesson, score: number): Promise<string[]> {
+    const rewards: string[] = [];
+    
+    if (score >= 90) {
+      rewards.push('Perfect Score Bonus');
     }
+    
+    if (score >= 80) {
+      rewards.push('Gacha Ticket');
+    }
+    
+    if (lesson.difficulty === 'advanced' && score >= 70) {
+      rewards.push('Szansa na Rzadkiego Filozofa');
+    }
+    
+    return rewards;
   }
 }
+
+export default new EnhancedLessonService();

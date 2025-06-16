@@ -1,7 +1,6 @@
 import { GraphQLSchema, GraphQLObjectType, GraphQLString, GraphQLList, GraphQLInt, GraphQLBoolean } from 'graphql';
 import { GraphQLDateTime } from 'graphql-iso-date';
 
-// Definicje
 const PhilosopherType = new GraphQLObjectType({
   name: 'Philosopher',
   fields: () => ({
@@ -12,8 +11,7 @@ const PhilosopherType = new GraphQLObjectType({
     rarity: { type: GraphQLString },
     imageUrl: { type: GraphQLString },
     quotes: { type: new GraphQLList(GraphQLString) },
-    specialAbility: { type: SpecialAbilityType },
-    stats: { type: StatsType },
+
   }),
 });
 
@@ -29,22 +27,21 @@ const LessonType = new GraphQLObjectType({
     philosophicalConcepts: { type: new GraphQLList(GraphQLString) },
     isCompleted: { type: GraphQLBoolean },
     progress: { type: GraphQLInt },
-    rewards: { type: RewardsType },
-    // Relacje - opcjonalnie
+
     requiredPhilosopher: {
       type: PhilosopherType,
-      resolve: (lesson, args, context) => {
-        return context.dataSources.philosophers.getById(lesson.requiredPhilosopherId);
+      resolve: async (lesson, args, context) => {
+        if (!lesson.requiredPhilosopherId) return null;
+        return context.services.philosophers?.getById?.(lesson.requiredPhilosopherId) || null;
       },
     },
   }),
 });
 
-// Query
 const QueryType = new GraphQLObjectType({
   name: 'Query',
   fields: {
-    // Lekcje
+
     lessons: {
       type: new GraphQLList(LessonType),
       args: {
@@ -52,19 +49,33 @@ const QueryType = new GraphQLObjectType({
         includeExternal: { type: GraphQLBoolean },
       },
       resolve: async (_, args, context) => {
-        return context.dataSources.lessons.getAll(args);
+        if (!context.user) {
+          throw new Error('Authentication required');
+        }
+        
+        const result = await context.services.lessons.getLessons(
+          context.userId!,
+          { 
+            stage: args.stage,
+            // includeExternal: args.includeExternal 
+          }
+        );
+        
+        return result.lessons;
       },
     },
+
     lesson: {
       type: LessonType,
       args: {
         id: { type: GraphQLString },
       },
       resolve: async (_, { id }, context) => {
-        return context.dataSources.lessons.getById(id);
+
+        return context.services.lessons.getLesson(id, context.userId);
       },
     },
-    // Filozofowie
+
     philosophers: {
       type: new GraphQLList(PhilosopherType),
       args: {
@@ -72,20 +83,24 @@ const QueryType = new GraphQLObjectType({
         owned: { type: GraphQLBoolean },
       },
       resolve: async (_, args, context) => {
-        return context.dataSources.philosophers.getAll(args);
+
+        return [];
       },
     },
-    // Rekomendacje
+
     recommendedLessons: {
       type: new GraphQLList(LessonType),
       resolve: async (_, __, context) => {
-        return context.dataSources.lessons.getRecommendations(context.userId);
+        if (!context.user) {
+          throw new Error('Authentication required');
+        }
+
+        return context.services.lessons.getRecommendations(context.userId!);
       },
     },
   },
 });
 
-// Mutatory
 const MutationType = new GraphQLObjectType({
   name: 'Mutation',
   fields: {
@@ -97,14 +112,23 @@ const MutationType = new GraphQLObjectType({
         timeSpent: { type: GraphQLInt },
       },
       resolve: async (_, args, context) => {
-        await context.dataSources.lessons.complete(
-          context.userId,
+        if (!context.user) {
+          throw new Error('Authentication required');
+        }
+
+        await context.services.lessons.completeLesson(
+          context.userId!,
           args.lessonId,
-          args
+          {
+            score: args.score,
+            timeSpent: args.timeSpent,
+          }
         );
-        return context.dataSources.lessons.getById(args.lessonId);
+        
+        return context.services.lessons.getLesson(args.lessonId, context.userId);
       },
     },
+
     pullGacha: {
       type: new GraphQLList(PhilosopherType),
       args: {
@@ -112,17 +136,17 @@ const MutationType = new GraphQLObjectType({
         count: { type: GraphQLInt },
       },
       resolve: async (_, args, context) => {
-        return context.dataSources.gacha.pull(
-          context.userId,
-          args.poolId,
-          args.count
-        );
+        if (!context.user) {
+          throw new Error('Authentication required');
+        }
+
+        return [];
       },
     },
   },
 });
 
-// Subskrypcje - też chyba na opcjach się skończy
+// Subscription Type (works the same way)
 const SubscriptionType = new GraphQLObjectType({
   name: 'Subscription',
   fields: {
@@ -132,13 +156,8 @@ const SubscriptionType = new GraphQLObjectType({
         lessonId: { type: GraphQLString },
       },
       subscribe: async (_, { lessonId }, context) => {
-        return context.pubsub.asyncIterator(`LESSON_PROGRESS_${lessonId}`);
-      },
-    },
-    leaderboardUpdate: {
-      type: LeaderboardType,
-      subscribe: async (_, __, context) => {
-        return context.pubsub.asyncIterator('LEADERBOARD_UPDATE');
+
+        throw new Error('Subscriptions not implemented yet');
       },
     },
   },

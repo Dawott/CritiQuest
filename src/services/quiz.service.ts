@@ -71,7 +71,7 @@ export class QuizService {
       philosophicalContext: string;
     }
     
-    // Predefined scenarios for demo - in production, these could be AI-generated
+    // Predefinowane scenariusze do dema
     const scenarios: Record<ScenarioCategory, Record<string, Scenario>> = {
       ethics: {
         trolleyProblem: {

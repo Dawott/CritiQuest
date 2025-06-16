@@ -1,38 +1,83 @@
 import { Response } from 'express';
+import { z } from 'zod';
 import { AuthRequest } from '../middleware/auth.middleware';
-import { LessonService } from '../services/lesson.service';
-import { validationResult } from 'express-validator';
+import EnhancedLessonService from '../services/lesson.service';
 
-export class LessonController {
-  private lessonService = new LessonService();
+// Schemy dla requestów
+const QuerySchema = z.object({
+  stage: z.string().optional(),
+  difficulty: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
+  includeCompleted: z.string().transform(val => val === 'true').optional(),
+  limit: z.string().transform(val => parseInt(val)).optional(),
+  offset: z.string().transform(val => parseInt(val)).optional(),
+});
 
+const CompletionSchema = z.object({
+  score: z.number().min(0).max(100),
+  timeSpent: z.number().min(0),
+  notes: z.string().optional(),
+});
+
+export class EnhancedLessonController {
+  private lessonService = EnhancedLessonService;
+
+  // Pobierz lekcję z filtrowaniem
   getLessons = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      const { stage, includeExternal } = req.query;
+      const queryParams = QuerySchema.safeParse(req.query);
       
-      const lessons = await this.lessonService.getLessons(req.userId!, {
-        stage: stage as string,
-        includeExternal: includeExternal === 'true',
-      });
+      if (!queryParams.success) {
+        res.status(400).json({
+          success: false,
+          error: 'Błędne parametry query',
+          details: queryParams.error.errors,
+        });
+        return;
+      }
+
+      const { stage, difficulty, includeCompleted, limit, offset } = queryParams.data;
+      
+      const result = await this.lessonService.getLessons(
+        req.userId!,
+        { stage, difficulty, includeCompleted },
+        { limit, offset }
+      );
       
       res.json({
         success: true,
-        data: lessons,
-        count: lessons.length,
+        data: result.lessons,
+        pagination: {
+          total: result.total,
+          hasMore: result.hasMore,
+          limit: limit || 20,
+          offset: offset || 0,
+        },
+        userProgress: result.userProgress,
       });
     } catch (error) {
+      console.error('Błąd pobrania lekcji:', error);
       res.status(500).json({
         success: false,
-        error: 'Nie udało sie pobrać lekcji',
+        error: 'Nie udało się pobrać lekcji',
+        message: process.env.NODE_ENV === 'development' ? error.message : undefined,
       });
     }
   };
 
+  // Pobierz jedną lekcję
   getLesson = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       const { lessonId } = req.params;
       
-      const lesson = await this.lessonService.getLesson(lessonId);
+      if (!lessonId) {
+        res.status(400).json({
+          success: false,
+          error: 'LessonID jest wymagane',
+        });
+        return;
+      }
+      
+      const lesson = await this.lessonService.getLesson(lessonId, req.userId);
       
       if (!lesson) {
         res.status(404).json({
@@ -47,45 +92,67 @@ export class LessonController {
         data: lesson,
       });
     } catch (error) {
+      console.error('Błąd pobrania lekcji:', error);
       res.status(500).json({
         success: false,
         error: 'Nie udało się pobrać lekcji',
+        message: process.env.NODE_ENV === 'development' ? error.message : undefined,
       });
     }
   };
 
+  // Zakończ lekcję
   completeLesson = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
+      const { lessonId } = req.params;
+      
+      // walidacja request body
+      const validationResult = CompletionSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
         res.status(400).json({
           success: false,
-          errors: errors.array(),
+          error: 'Błędne dane zakończenia',
+          details: validationResult.error.errors,
         });
         return;
       }
       
-      const { lessonId } = req.params;
-      const { score, timeSpent, notes } = req.body;
-      
-      await this.lessonService.completeLesson(req.userId!, lessonId, {
-        score,
-        timeSpent,
-        notes,
-      });
+      const result = await this.lessonService.completeLesson(
+        req.userId!,
+        lessonId,
+        validationResult.data
+      );
       
       res.json({
         success: true,
-        message: 'Lekcja zakończona z powodzeniem',
+        message: 'Lekcja zakończona z sukcesem',
+        data: {
+          experienceGained: result.experienceGained,
+          rewards: result.rewards,
+          ...(result.levelUp && { levelUp: result.levelUp }),
+        },
       });
     } catch (error) {
+      console.error('Błąd zakończenia lekcji:', error);
+      
+      if (error.message.includes('not found')) {
+        res.status(404).json({
+          success: false,
+          error: 'Lekcja nieodnaleziona',
+        });
+        return;
+      }
+      
       res.status(500).json({
         success: false,
-        error: 'Nie udało się ukończyć lekcji',
+        error: 'Nie udało się zakończyć lekcji',
+        message: process.env.NODE_ENV === 'development' ? error.message : undefined,
       });
     }
   };
 
+  // Pobierz rekomendacje
   getRecommendations = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       const recommendations = await this.lessonService.getRecommendations(req.userId!);
@@ -93,32 +160,50 @@ export class LessonController {
       res.json({
         success: true,
         data: recommendations,
+        count: recommendations.length,
       });
     } catch (error) {
+      console.error('Błąd pobierania rekomendacji:', error);
       res.status(500).json({
         success: false,
-        error: 'Nie udało się pobrać rekomendacji',
+        error: 'Błąd pobierania rekomendacji',
+        message: process.env.NODE_ENV === 'development' ? error.message : undefined,
       });
     }
   };
 
+  // Pobierz lekcję featured
   getFeaturedLessons = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      //Endpoint publiczny
-      const lessons = await this.lessonService.getFeaturedLessons();
+      const limitParam = req.query.limit as string;
+      const limit = limitParam ? parseInt(limitParam) : 10;
+      
+      if (isNaN(limit) || limit < 1 || limit > 50) {
+        res.status(400).json({
+          success: false,
+          error: 'Limit musi być między 1 i 50',
+        });
+        return;
+      }
+      
+      const lessons = await this.lessonService.getFeaturedLessons(limit);
       
       res.json({
         success: true,
         data: lessons,
+        count: lessons.length,
       });
     } catch (error) {
+      console.error('Pobierz lekcję error:', error);
       res.status(500).json({
         success: false,
-        error: 'Nie udało się pobrać lekcji',
+        error: 'Nie udało się pobrać featured',
+        message: process.env.NODE_ENV === 'development' ? error.message : undefined,
       });
     }
   };
 
+  // Pobierz analitykę
   getLessonAnalytics = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       const { lessonId } = req.params;
@@ -130,20 +215,23 @@ export class LessonController {
         data: analytics,
       });
     } catch (error) {
+      console.error('Get lesson analytics error:', error);
       res.status(500).json({
         success: false,
-        error: 'Failed to fetch analytics',
+        error: 'Failed to get lesson analytics',
+        message: process.env.NODE_ENV === 'development' ? error.message : undefined,
       });
     }
   };
 
+  // Utwórz lekcję
   createLesson = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      // Sprawdzanie admina
+      // Pozwolenia admina
       if (!req.user?.admin) {
         res.status(403).json({
           success: false,
-          error: 'Unauthorized',
+          error: 'Niedostateczne dostępy',
         });
         return;
       }
@@ -152,17 +240,34 @@ export class LessonController {
       
       res.status(201).json({
         success: true,
+        message: 'Lekcja zakończona z sukcesem',
         data: { lessonId },
       });
     } catch (error) {
+      console.error('Błąd utworzenia lekcji:', error);
       res.status(500).json({
         success: false,
-        error: 'Nie udało się utworzyć',
+        error: 'Błąd utworzenia lekcji',
+        message: process.env.NODE_ENV === 'development' ? error.message : undefined,
       });
     }
   };
 
-  updateLesson = async (req: AuthRequest, res: Response): Promise<void> => {
-    // TBD
+  // Health check
+  healthCheck = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      res.json({
+        success: true,
+        message: 'Zdrowe!',
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Niezdrowe!',
+      });
+    }
   };
 }
+
+export default new EnhancedLessonController();
