@@ -324,16 +324,23 @@ async getLesson(lessonId: string): Promise<Lesson | null> {
   async addGachaHistory(userId: string, history: any): Promise<void> {
     await this.db.ref(`gachaSystem/history/${userId}/pulls`).push(history);
   }
+  
   async getUserGachaHistory(userId: string, limit: number = 50): Promise<any[]> {
-    const snapshot = await this.db
-      .ref(`gachaSystem/history/${userId}/pulls`)
-      .orderByChild('timestamp')
-      .limitToLast(limit)
-      .once('value');
-    const history = snapshot.val() || {};
-
-    return Object.values(history).reverse();
-  }
+  const snapshot = await this.db
+    .ref(`gachaSystem/history/${userId}/pulls`)
+    .orderByChild('timestamp')
+    .limitToLast(limit)
+    .once('value');
+  
+  const history = snapshot.val() || {};
+  return Object.entries(history)
+    .map(([id, data]: [string, any]) => ({
+      id,
+      ...data,
+      philosopherName: data.philosopherId 
+    }))
+    .reverse();
+}
 
   // Listenery
   subscribeToUser(userId: string, callback: (user: User | null) => void): () => void {
