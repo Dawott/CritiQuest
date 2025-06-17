@@ -1,4 +1,4 @@
-import admin from 'firebase-admin';
+import admin, { database } from 'firebase-admin';
 import { 
   User, 
   UserProfile, 
@@ -22,6 +22,11 @@ export class EnhancedDatabaseService {
     retryAttempts: 3,
     timeout: 10000,
   };
+
+   async getUser(userId: string): Promise<User | null> {
+    const snapshot = await this.db.ref(`users/${userId}`).once('value');
+    return snapshot.val();
+  }
 
   // CRUD
   async create<T>(path: string, data: T, options?: DatabaseOptions): Promise<string> {
@@ -145,6 +150,7 @@ export class EnhancedDatabaseService {
 
     await this.batchUpdate(updates);
   }
+  
 
   async addExperienceWithLevelUp(userId: string, amount: number): Promise<{
     newLevel: number;
@@ -237,7 +243,6 @@ export class EnhancedDatabaseService {
     return () => ref.off('value');
   }
 
-  // Error handling
   private handleDatabaseError(error: any, operation: string): Error {
     console.error(`Database ${operation} error:`, error);
     
@@ -251,6 +256,147 @@ export class EnhancedDatabaseService {
     return new Error(message);
   }
 
+async getQuiz(quizId: string): Promise<Quiz | null> {
+    const snapshot = await this.db.ref(`quizzes/${quizId}`).once('value');
+    return snapshot.val();
+  }
+
+  async getUserPhilosophers(userId: string): Promise<Record<string, OwnedPhilosopher>> {
+    const snapshot = await this.db.ref(`users/${userId}/philosopherCollection`).once('value');
+    return snapshot.val() || {};
+  }
+
+async getLesson(lessonId: string): Promise<Lesson | null> {
+    const snapshot = await this.db.ref(`lessons/${lessonId}`).once('value');
+    return snapshot.val();
+  }
+
+  async getLessonsByStage(stage: string): Promise<Lesson[]> {
+    const snapshot = await this.db
+      .ref('lessons')
+      .orderByChild('stage')
+      .equalTo(stage)
+      .once('value');
+    const lessons = snapshot.val() || {};
+
+    return Object.entries(lessons)
+      .map(([id, lesson]) => ({ id, ...lesson as Lesson }))
+      .sort((a, b) => a.order - b.order);
+  }
+
+  async completeLesson(userId: string, lessonId: string): Promise<void> {
+    const updates: Record<string, any> = {};
+    // Dodaj do zakończonych
+    const completedRef = `users/${userId}/progression/completedLessons`;
+    const snapshot = await this.db.ref(completedRef).once('value');
+    const completedLessons = snapshot.val() || [];
+    if (!completedLessons.includes(lessonId)) {
+      completedLessons.push(lessonId);
+      updates[completedRef] = completedLessons;
+    }
+    // Aktualizuj ostatnią aktywność
+    updates[`users/${userId}/profile/lastActive`] = Date.now();
+    await this.db.ref().update(updates);
+  }
+
+  //Gacha
+  async updateUserStats(userId: string, updates: Partial<any>): Promise<void> {
+    const statsRef = this.db.ref(`users/${userId}/stats`);
+    const incrementalUpdates: Record<string, any> = {};
+    for (const [key, value] of Object.entries(updates)) {
+      if (typeof value === 'number' && value < 0) {
+        incrementalUpdates[key] = database.ServerValue.increment(value);
+      } else {
+        incrementalUpdates[key] = value;
+      }
+    }
+    await statsRef.update(incrementalUpdates);
+  }
+  async incrementPhilosopherDuplicates(userId: string, philosopherId: string): Promise<void> {
+    const philosopherRef = this.db.ref(`users/${userId}/philosopherCollection/${philosopherId}`);
+    await philosopherRef.update({
+      duplicates: database.ServerValue.increment(1),
+      // Tymczasowo zwiększamy staty za duplikaty
+      experience: database.ServerValue.increment(50) // Bonus XP za duplikat
+    });
+  }
+
+  async addGachaHistory(userId: string, history: any): Promise<void> {
+    await this.db.ref(`gachaSystem/history/${userId}/pulls`).push(history);
+  }
+  async getUserGachaHistory(userId: string, limit: number = 50): Promise<any[]> {
+    const snapshot = await this.db
+      .ref(`gachaSystem/history/${userId}/pulls`)
+      .orderByChild('timestamp')
+      .limitToLast(limit)
+      .once('value');
+    const history = snapshot.val() || {};
+
+    return Object.values(history).reverse();
+  }
+
+  // Listenery
+  subscribeToUser(userId: string, callback: (user: User | null) => void): () => void {
+    const ref = this.db.ref(`users/${userId}`);
+    const listener = ref.on('value', (snapshot) => {
+      callback(snapshot.val());
+    });
+    // Unsubscribe
+    return () => ref.off('value', listener);
+  }
+  subscribeToLeaderboard(
+    type: 'weekly' | 'allTime',
+    limit: number,
+    callback: (leaderboard: any[]) => void
+  ): () => void {
+    const ref = this.db
+      .ref(`leaderboards/${type}`)
+      .orderByChild('score')
+      .limitToLast(limit);
+
+    const listener = ref.on('value', (snapshot) => {
+      const data = snapshot.val() || {};
+      const leaderboard = Object.entries(data)
+        .map(([userId, userData]) => ({ userId, ...userData as any }))
+        .reverse(); 
+      callback(leaderboard);
+    });
+    return () => ref.off('value', listener);
+  }
+
+  async getUserTickets(userId: string): Promise<number> {
+    const snapshot = await this.db.ref(`users/${userId}/stats/gachaTickets`).once('value');
+    return snapshot.val() || 0;
+  }
+
+  //Filozofowie
+  async getPhilosopher(philosopherId: string): Promise<Philosopher | null> {
+    const snapshot = await this.db.ref(`philosophers/${philosopherId}`).once('value');
+    return snapshot.val();
+  }
+  async getAllPhilosophers(): Promise<Record<string, Philosopher>> {
+    const snapshot = await this.db.ref('philosophers').once('value');
+    return snapshot.val() || {};
+  }
+
+  async addPhilosopherToCollection(
+    userId: string, 
+    philosopherId: string
+  ): Promise<void> {
+    const philosopher = await this.getPhilosopher(philosopherId);
+    if (!philosopher) throw new Error('Philosopher not found');
+    const ownedPhilosopher: OwnedPhilosopher = {
+      level: 1,
+      experience: 0,
+      duplicates: 0,
+      school: "",
+      stats: { ...philosopher.baseStats },
+    };
+    await this.db
+      .ref(`users/${userId}/philosopherCollection/${philosopherId}`)
+      .set(ownedPhilosopher)
+  }
+
   // Health check
   async healthCheck(): Promise<boolean> {
     try {
@@ -259,6 +405,57 @@ export class EnhancedDatabaseService {
     } catch (error) {
       return false;
     }
+  }
+
+  async submitQuizResult(
+    userId: string, 
+    quizId: string, 
+    score: number, 
+    timeSpent: number,
+    additionalData?: {
+      answers?: Record<string, string[]>;
+      debateResults?: Record<string, any>;
+      philosophicalInsights?: string[];
+      hintsUsed?: number;
+    }
+  ): Promise<void> {
+    const resultId = `result_${Date.now()}`;
+    const timestamp = Date.now();
+    
+    const quizResult = {
+      id: resultId,
+      userId,
+      quizId,
+      score,
+      timeSpent,
+      timestamp,
+      passed: score >= 70,
+      ...additionalData
+    };
+
+    const updates = {
+      [`users/${userId}/quizHistory/${resultId}`]: quizResult,
+      [`users/${userId}/stats/quizzesCompleted`]: admin.database.ServerValue.increment(1),
+      [`users/${userId}/stats/totalTimeSpent`]: admin.database.ServerValue.increment(timeSpent),
+      [`analytics/quizzes/${quizId}/attempts/${resultId}`]: {
+        userId,
+        score,
+        timeSpent,
+        timestamp
+      }
+    };
+
+    await this.db.ref().update(updates);
+  }
+
+  async getUserQuizHistory(userId: string, limit: number = 10): Promise<any[]> {
+    const snapshot = await this.db.ref(`users/${userId}/quizHistory`)
+      .orderByChild('timestamp')
+      .limitToLast(limit)
+      .once('value');
+    
+    const history = snapshot.val() || {};
+    return Object.values(history).reverse(); 
   }
 }
 

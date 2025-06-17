@@ -1,4 +1,155 @@
+import { string } from 'zod';
+import DatabaseService from './firebase/database.service';
+import { Achievement } from '@/types/database.types';
+
 export class GamificationService {
+async addExperience(userId: string, amount: number): Promise<{
+    newLevel: number;
+    leveledUp: boolean;
+    newExperience: number;
+    rewards?: {
+      gachaTickets: number;
+      unlockedFeatures: string[];
+    };
+  }> {
+    try {
+      const user = await DatabaseService.getUser(userId);
+      if (!user) throw new Error('User not found');
+
+      const currentLevel = user.progression.level;
+      const currentExp = user.progression.experience;
+      const newTotalExp = currentExp + amount;
+
+      const newLevel = Math.floor(Math.sqrt(newTotalExp / 100)) + 1;
+      const leveledUp = newLevel > currentLevel;
+      const updates: any = {
+        [`users/${userId}/progression/experience`]: newTotalExp,
+        [`users/${userId}/progression/level`]: newLevel,
+        [`users/${userId}/profile/lastActive`]: Date.now(),
+      };
+
+      let rewards;
+      if (leveledUp) {
+        const levelsGained = newLevel - currentLevel;
+        const gachaTickets = levelsGained * 2; 
+        
+        updates[`users/${userId}/stats/gachaTickets`] = user.stats.gachaTickets + gachaTickets;
+
+        const unlockedFeatures = this.checkFeatureUnlocks(newLevel);
+        
+        rewards = {
+          gachaTickets,
+          unlockedFeatures
+        };
+
+        updates[`analytics/levelUps/${userId}/${Date.now()}`] = {
+          fromLevel: currentLevel,
+          toLevel: newLevel,
+          experienceAdded: amount,
+          timestamp: Date.now()
+        };
+      }
+
+      await DatabaseService.batchUpdate(updates);
+
+      return {
+        newLevel,
+        leveledUp,
+        newExperience: newTotalExp,
+        rewards
+      };
+
+    } catch (error) {
+      console.error('Failed to add experience:', error);
+      throw new Error('Failed to update user experience');
+    }
+  }
+
+  async checkAchievement(
+    userId: string, 
+    achievementId: string, 
+    context?: any
+  ): Promise<{
+    unlocked: boolean;
+    achievement?: Achievement;
+    wasAlreadyUnlocked: boolean;
+  }> {
+    try {
+      const user = await DatabaseService.getUser(userId);
+      if (!user) throw new Error('User not found');
+
+      const existingAchievement = user.achievements[achievementId];
+      if (existingAchievement) {
+        return { 
+          unlocked: false, 
+          wasAlreadyUnlocked: true 
+        };
+      }
+
+      const achievementDef = await this.getAchievementDefinition(achievementId);
+      if (!achievementDef) {
+        console.warn(`Achievement definition not found: ${achievementId}`);
+        return { unlocked: false, wasAlreadyUnlocked: false };
+      }
+
+      const criteriaCheck = await this.checkAchievementCriteria(userId, achievementDef, context);
+      
+      if (criteriaCheck.met) {
+        const achievement: Achievement = {
+          unlockedAt: Date.now(),
+          progress: 100
+        };
+
+        const updates = {
+          [`users/${userId}/achievements/${achievementId}`]: achievement,
+          [`analytics/achievements/${achievementId}/${userId}`]: {
+            unlockedAt: Date.now(),
+            context: context || {}
+          }
+        };
+
+        if (achievementDef.rewards) {
+          if (achievementDef.rewards.experience > 0) {
+            updates[`users/${userId}/progression/experience`] = user.progression.experience + achievementDef.rewards.experience;
+          }
+          if (achievementDef.rewards.gachaTickets > 0) {
+            updates[`users/${userId}/stats/gachaTickets`] = user.stats.gachaTickets + achievementDef.rewards.gachaTickets;
+          }
+        }
+
+        await DatabaseService.batchUpdate(updates);
+
+        return {
+          unlocked: true,
+          achievement,
+          wasAlreadyUnlocked: false
+        };
+      }
+
+      return { unlocked: false, wasAlreadyUnlocked: false };
+
+    } catch (error) {
+      console.error('Failed to check achievement:', error);
+      return { unlocked: false, wasAlreadyUnlocked: false };
+    }
+  }
+
+  private async updateUserDifficulty(userId: string, difficultyMultiplier: number): Promise<void> {
+    try {
+      const updates = {
+        [`users/${userId}/preferences/adaptiveDifficulty`]: {
+          multiplier: difficultyMultiplier,
+          lastAdjusted: Date.now(),
+          adjustmentReason: difficultyMultiplier > 1 ? 'performance_high' : difficultyMultiplier < 1 ? 'performance_low' : 'performance_balanced'
+        }
+      };
+
+      await DatabaseService.batchUpdate(updates);
+    } catch (error) {
+      console.error('Failed to update user difficulty:', error);
+    }
+  }
+
   //Dynamiczna trudność
   async adjustDifficulty(
     userId: string,
@@ -22,11 +173,273 @@ export class GamificationService {
       newDifficulty = 1.0;
       reasoning = "Dobra robota! Utrzymujemy tempo.";
     }
-
+    
     // Update ustawień trudności
     await this.updateUserDifficulty(userId, newDifficulty);
 
     return { newDifficulty, reasoning };
+  }
+
+private checkFeatureUnlocks(level: number): string[] {
+    const unlocks: string[] = [];
+
+    const featureUnlocks = {
+      5: 'debate_mode',
+      10: 'advanced_analytics', 
+      15: 'custom_quizzes',
+      20: 'philosopher_teams',
+      25: 'daily_challenges',
+      30: 'leaderboards'
+    };
+
+    if (featureUnlocks[level]) {
+      unlocks.push(featureUnlocks[level]);
+    }
+
+    return unlocks;
+  }
+
+  //Achieve
+  private async getAchievementDefinition(achievementId: string): Promise<any> {
+    // TBD
+    const achievementDefinitions = {
+      'perfect_quiz': {
+        id: 'perfect_quiz',
+        name: 'Doskonałość Filozofa',
+        description: 'Uzyskaj 100% w jakimkolwiek quizie',
+        criteria: { type: 'perfect_score' },
+        rewards: { experience: 100, gachaTickets: 2 }
+      },
+      'speed_thinker': {
+        id: 'speed_thinker', 
+        name: 'Szybki Neuron',
+        description: 'Ukończ quiz w 5 minut',
+        criteria: { type: 'time_limit', maxTime: 300 },
+        rewards: { experience: 50, gachaTickets: 1 }
+      },
+      'debate_master': {
+        id: 'debate_master',
+        name: 'Mistrz Erystyki',
+        description: 'Wygraj 3 debaty',
+        criteria: { type: 'debate_wins', minWins: 3 },
+        rewards: { experience: 150, gachaTickets: 3 }
+      },
+      'philosopher_collector': {
+        id: 'philosopher_collector',
+        name: 'Aleksandria',
+        description: 'Skompletuj 10 filozofów',
+        criteria: { type: 'collection_count', minCount: 10 },
+        rewards: { experience: 200, gachaTickets: 5 }
+      },
+      'weekly_streak': {
+        id: 'weekly_streak',
+        name: 'Praktyka Czyni...',
+        description: 'Ukończ quiz codziennie przez 7 dni',
+        criteria: { type: 'daily_streak', minDays: 7 },
+        rewards: { experience: 300, gachaTickets: 4 }
+      }
+    };
+
+    return achievementDefinitions[achievementId] || null;
+  }
+
+  private async checkAchievementCriteria(
+    userId: string, 
+    achievementDef: any, 
+    context: any
+  ): Promise<{ met: boolean; progress?: number }> {
+    try {
+      const { criteria } = achievementDef;
+
+      switch (criteria.type) {
+        case 'perfect_score':
+          return { 
+            met: context?.quizResult?.score === 100,
+            progress: context?.quizResult?.score || 0
+          };
+
+        case 'time_limit':
+          return { 
+            met: context?.quizResult?.timeSpent <= criteria.maxTime,
+            progress: Math.max(0, 100 - ((context?.quizResult?.timeSpent / criteria.maxTime) * 100))
+          };
+
+        case 'debate_wins':
+          const debateWins = context?.quizResult?.debateResults ? 
+            Object.values(context.quizResult.debateResults).filter(r => r.winner === 'user').length : 0;
+          return { 
+            met: debateWins >= criteria.minWins,
+            progress: (debateWins / criteria.minWins) * 100
+          };
+
+        case 'collection_count':
+          const user = await DatabaseService.getUser(userId);
+          const collectionCount = Object.keys(user?.philosopherCollection || {}).length;
+          return { 
+            met: collectionCount >= criteria.minCount,
+            progress: (collectionCount / criteria.minCount) * 100
+          };
+
+        case 'daily_streak':
+          const userStats = await DatabaseService.getUser(userId);
+          const currentStreak = userStats?.stats?.streakDays || 0;
+          return { 
+            met: currentStreak >= criteria.minDays,
+            progress: (currentStreak / criteria.minDays) * 100
+          };
+
+        default:
+          console.warn(`Unknown achievement criteria type: ${criteria.type}`);
+          return { met: false, progress: 0 };
+      }
+    } catch (error) {
+      console.error('Failed to check achievement criteria:', error);
+      return { met: false, progress: 0 };
+    }
+  }
+
+  async processQuizCompletion(
+    userId: string,
+    quizData: {
+      score: number;
+      experience: number;
+      perfectScore: boolean;
+      timeBonus: boolean;
+      streakBonus: boolean;
+    }
+  ): Promise<{
+    experienceResult: any;
+    achievementsUnlocked: string[];
+    leveledUp: boolean;
+  }> {
+    try {
+      const experienceResult = await this.addExperience(userId, quizData.experience);
+
+      const achievementsUnlocked: string[] = [];
+
+      if (quizData.perfectScore) {
+        const result = await this.checkAchievement(userId, 'perfect_quiz', { quizResult: { score: 100 } });
+        if (result.unlocked) achievementsUnlocked.push('perfect_quiz');
+      }
+
+      if (quizData.timeBonus) {
+        const result = await this.checkAchievement(userId, 'speed_thinker', { quizResult: { timeSpent: 250 } });
+        if (result.unlocked) achievementsUnlocked.push('speed_thinker');
+      }
+
+      const collectionResult = await this.checkAchievement(userId, 'philosopher_collector');
+      if (collectionResult.unlocked) achievementsUnlocked.push('philosopher_collector');
+
+      await this.updateDailyStreak(userId);
+      const streakResult = await this.checkAchievement(userId, 'weekly_streak');
+      if (streakResult.unlocked) achievementsUnlocked.push('weekly_streak');
+
+      return {
+        experienceResult,
+        achievementsUnlocked,
+        leveledUp: experienceResult.leveledUp
+      };
+
+    } catch (error) {
+      console.error('Failed to process quiz completion:', error);
+      return {
+        experienceResult: { newLevel: 1, leveledUp: false, newExperience: 0 },
+        achievementsUnlocked: [],
+        leveledUp: false
+      };
+    }
+  }
+
+  // Daily streak
+  private async updateDailyStreak(userId: string): Promise<void> {
+    try {
+      const user = await DatabaseService.getUser(userId);
+      if (!user) return;
+
+      const now = Date.now();
+      const lastUpdate = user.stats.lastStreakUpdate || 0;
+      const dayInMs = 24 * 60 * 60 * 1000;
+      const daysSinceLastUpdate = Math.floor((now - lastUpdate) / dayInMs);
+
+      let newStreak = user.stats.streakDays || 0;
+
+      if (daysSinceLastUpdate === 1) {
+        newStreak += 1;
+      } else if (daysSinceLastUpdate > 1) {
+        newStreak = 1;
+      }
+
+      const updates = {
+        [`users/${userId}/stats/streakDays`]: newStreak,
+        [`users/${userId}/stats/lastStreakUpdate`]: now
+      };
+
+      await DatabaseService.batchUpdate(updates);
+    } catch (error) {
+      console.error('Failed to update daily streak:', error);
+    }
+  }
+
+  // Update learning path
+  async updateLearningPath(userId: string, learningData: {
+    strengths: string[];
+    weaknesses: string[];
+    lastQuizScore: number;
+    recommendedTopics: string[];
+    philosophicalAlignment: string;
+  }): Promise<void> {
+    try {
+      const updates = {
+        [`users/${userId}/learningAnalytics`]: {
+          ...learningData,
+          lastUpdated: Date.now(),
+          learningVelocity: this.calculateLearningVelocity(learningData.lastQuizScore),
+          adaptiveDifficulty: await this.getRecommendedDifficulty(userId, learningData.lastQuizScore)
+        }
+      };
+
+      await DatabaseService.batchUpdate(updates);
+    } catch (error) {
+      console.error('Failed to update learning path:', error);
+    }
+  }
+
+  // Predkosc nauki
+  private calculateLearningVelocity(score: number): number {
+    // Wyżej = szybciej
+    return Math.max(0.5, Math.min(2.0, score / 50));
+  }
+
+  // Rekomendacja trudności
+  private async getRecommendedDifficulty(userId: string, lastScore: number): Promise<{
+    current: 'beginner' | 'intermediate' | 'advanced';
+    confidence: number;
+  }> {
+    try {
+      const recentQuizzes = await DatabaseService.getUserQuizHistory(userId, 5);
+      const averageScore = recentQuizzes.length > 0 
+        ? recentQuizzes.reduce((sum, quiz) => sum + quiz.score, 0) / recentQuizzes.length
+        : lastScore;
+
+      let difficulty: 'beginner' | 'intermediate' | 'advanced';
+      let confidence: number;
+
+      if (averageScore >= 85) {
+        difficulty = 'advanced';
+        confidence = Math.min(100, (averageScore - 85) * 6.67); 
+      } else if (averageScore >= 65) {
+        difficulty = 'intermediate';
+        confidence = Math.min(100, (averageScore - 65) * 5); 
+      } else {
+        difficulty = 'beginner';
+        confidence = Math.max(0, 100 - ((65 - averageScore) * 2)); 
+      }
+
+      return { current: difficulty, confidence };
+    } catch (error) {
+      console.error('Failed to get recommended difficulty:', error);
+      return { current: 'intermediate', confidence: 50 };
+    }
   }
 
   //Dailies
@@ -58,6 +471,46 @@ export class GamificationService {
       rewards: this.calculateChallengeRewards(type),
     };
   }
+
+  private async createChallenge(type:string): Promise<any>
+  {
+    const challenges = {
+      'dilemma': {
+      title: 'Problem Wagonika',
+      description: 'Problem Wagonika'
+    },
+    'paradox': {
+      title: 'Statek Tezeusza',
+      description: 'Statek Tezeusza'
+    },
+    'thought_experiment': {
+      title: 'Chiński Pokój',
+      description: 'Chiński Pokój'
+    }
+    };
+    return challenges[type] || challenges['dilemma'];
+  }
+
+  private async gatherPhilosopherPerspectives(challenge: any): Promise<Record<string, string>> {
+  return {
+    'kant': 'From a deontological perspective...',
+    'mill': 'A utilitarian would consider...',
+    'aristotle': 'Virtue ethics suggests...'
+  };
+}
+
+private calculateChallengeRewards(type: string): any {
+  const baseRewards = {
+    experience: 75,
+    tickets: 1
+  };
+
+  if (type === 'thought_experiment') {
+    baseRewards.experience += 25; 
+  }
+
+  return baseRewards;
+}
 
   //Synergie
 

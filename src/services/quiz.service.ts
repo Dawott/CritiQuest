@@ -1,10 +1,15 @@
 import { Quiz, Question, QuizType } from '@/types/database.types';
-import DatabaseService, { DifficultyLevel } from './firebase/database.service';
+import DatabaseService from './firebase/database.service';
+import { Difficulty } from '@/types/database.types';
 import { GamificationService } from './gamification.service';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { QuizResult, QuizSession } from '@/store/quizAtoms';
+import NetInfo from '@react-native-community/netinfo';
+import { getErrorMessage } from '../utils/error.utils';
 
 interface QuizGenerationOptions {
   concepts: string[];
-  difficulty: DifficultyLevel;
+  difficulty: Difficulty;
   questionCount: number;
   type: QuizType;
   philosopherContext?: string;
@@ -363,7 +368,7 @@ export class QuizService {
   }
 
   private async calculateAdaptiveDifficulty(userId: string, stats: any) {
-    type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced';
+    //type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced';
     type DifficultyMultiplier = 0.8 | 1.0 | 1.2;
     
     const performance = [stats.averageScore];
@@ -372,7 +377,7 @@ export class QuizService {
       performance
     );
 
-    const difficultyMap: Record<DifficultyMultiplier, DifficultyLevel> = {
+    const difficultyMap: Record<DifficultyMultiplier, Difficulty> = {
       0.8: 'beginner',
       1.0: 'intermediate',
       1.2: 'advanced',
@@ -422,7 +427,7 @@ export class QuizService {
       advanced: 0.8,
     };
 
-    const isDifficultyLevel = (d: string): d is DifficultyLevel => {
+    const isDifficultyLevel = (d: string): d is Difficulty => {
       return d in difficultyMultiplier;
     };
 
@@ -526,6 +531,257 @@ export class QuizService {
     
     return questions;
   }
+
+  calculateQuizResults(session: QuizSession, progress: any, timer: any): QuizResult {
+    const { quiz, answers, debateResults, philosopherBonus, hintsUsed } = session;
+    
+    const totalPoints = quiz.questions.reduce((sum, q) => sum + q.points, 0);
+    const earnedPoints = progress.criticalThinkingScore;
+    const score = Math.round((earnedPoints / totalPoints) * 100);
+    
+    let experience = Math.round(earnedPoints * 10);
+    
+    if (philosopherBonus) {
+      experience = Math.round(experience * philosopherBonus.multiplier);
+    }
+
+    if (score === 100 && progress.correctStreak === quiz.questions.length) {
+      experience = Math.round(experience * 1.5);
+    }
+
+    if (quiz.timeLimit && timer.elapsed < quiz.timeLimit * 0.5) {
+      experience = Math.round(experience * 1.2);
+    }
+
+    let tickets = 0;
+    if (score >= quiz.passingScore) {
+      tickets = Math.ceil(score / 20);
+    }
+
+    if (progress.correctStreak >= 3) {
+      tickets += 1;
+    }
+
+    if (hintsUsed > 0) {
+      experience = Math.round(experience * Math.max(0.8, 1 - (hintsUsed * 0.1)));
+    }
+
+    const insights = this.generatePhilosophicalInsights(session, progress, score);
+
+    return {
+      score,
+      totalPoints,
+      correctAnswers: progress.questionsAnswered,
+      totalQuestions: quiz.questions.length,
+      timeSpent: timer.elapsed,
+      philosophicalInsights: insights,
+      rewards: {
+        experience,
+        tickets,
+        newPhilosopher: score === 100 ? 'reward_philosopher' : undefined
+      }
+    };
+  }
+
+  async checkNetworkStatus(): Promise<boolean> {
+    try {
+      const networkState = await NetInfo.fetch();
+      return networkState.isConnected && networkState.isInternetReachable;
+    } catch (error) {
+      console.error('Network check failed:', error);
+      return false; // Assume offline if check fails
+    }
+  }
+
+  async storeOfflineSubmission(session: QuizSession, result: QuizResult, userId: string): Promise<void> {
+    try {
+      const offlineSubmissions = await AsyncStorage.getItem('offlineQuizzes') || '[]';
+      const submissions = JSON.parse(offlineSubmissions);
+      
+      submissions.push({
+        id: `offline_${Date.now()}`,
+        session,
+        result,
+        userId,
+        timestamp: Date.now()
+      });
+      
+      await AsyncStorage.setItem('offlineQuizzes', JSON.stringify(submissions));
+      console.log('Quiz zapisany offline');
+    } catch (error) {
+      console.error('Nie udało się zapisać offline:', error);
+      throw new Error('Nie udało się zapisać offline');
+    }
+  }
+
+  private generatePhilosophicalInsights(
+    session: QuizSession,
+    progress: any,
+    score: number
+  ): string[] {
+    const insights: string[] = [];
+    const { quiz, answers, debateResults } = session;
+
+    if (score >= 95) {
+      insights.push("Exceptional philosophical reasoning! You demonstrate mastery of complex concepts.");
+    } else if (score >= 85) {
+      insights.push("Strong philosophical understanding. You're thinking like a true philosopher.");
+    } else if (score >= 70) {
+      insights.push("Good philosophical foundation. Continue exploring these ideas deeply.");
+    } else if (score >= 50) {
+      insights.push("Philosophy is about questioning and learning. Every attempt makes you wiser.");
+    } else {
+      insights.push("Remember: in philosophy, struggling with ideas is part of the growth process.");
+    }
+
+    const questionTypes = quiz.questions.map(q => q.type);
+    
+    if (questionTypes.includes('scenario')) {
+      const scenarioAnswers = Object.entries(answers).filter(([qId]) => {
+        const question = quiz.questions.find(q => q.id === qId);
+        return question?.type === 'scenario';
+      });
+      
+      if (scenarioAnswers.length > 0) {
+        insights.push("Your ethical reasoning shows thoughtful consideration of moral complexities.");
+      }
+    }
+
+    if (questionTypes.includes('debate') && debateResults) {
+      const victories = Object.values(debateResults).filter(r => r.winner === 'user').length;
+      if (victories > 0) {
+        insights.push(`You won ${victories} philosophical debate(s), showing strong argumentative skills.`);
+      }
+    }
+
+    if (session.quiz.timeLimit && session.timeElapsed < session.quiz.timeLimit * 0.5) {
+      insights.push("Your quick thinking demonstrates intuitive understanding of philosophical concepts.");
+    } else if (session.quiz.timeLimit && session.timeElapsed > session.quiz.timeLimit * 0.9) {
+      insights.push("Taking time to think deeply is a hallmark of philosophical wisdom.");
+    }
+
+    if (progress.correctStreak === quiz.questions.length) {
+      insights.push("Perfect consistency! You maintained clarity throughout the entire quiz.");
+    } else if (progress.correctStreak >= Math.floor(quiz.questions.length * 0.7)) {
+      insights.push("Strong consistency in your reasoning shows developing philosophical maturity.");
+    }
+    return insights;
+  }
+
+  async submitQuizWithOfflineSupport(
+    session: QuizSession,
+    progress: any,
+    timer: any,
+    userId: string
+  ): Promise<{
+    success: boolean;
+    result?: any;
+    error?: string;
+    isOffline?: boolean;
+  }> {
+    try {
+      const result = this.calculateQuizResults(session, progress, timer);
+      
+      const isOnline = await this.checkNetworkStatus();
+      
+      if (isOnline) {
+        await DatabaseService.submitQuizResult(userId, session.quizId, result.score, timer.elapsed);
+        await this.updateUserStatsAfterQuiz(userId, result);
+        return { success: true, result };
+      } else {
+        await this.storeOfflineSubmission(session, result, userId);
+        return { success: true, result, isOffline: true };
+      }
+    } catch (error) {
+      return { success: false, error: getErrorMessage(error) };
+    }
+  }
+/*
+  private async storeOfflineSubmission(session: QuizSession, result: any, userId: string) {
+    const offlineSubmissions = await AsyncStorage.getItem('offlineQuizzes') || '[]';
+    const submissions = JSON.parse(offlineSubmissions);
+    
+    submissions.push({
+      id: `offline_${Date.now()}`,
+      session,
+      result,
+      userId,
+      timestamp: Date.now()
+    });
+    
+    await AsyncStorage.setItem('offlineQuizzes', JSON.stringify(submissions));
+  }*/
+
+    private async updateUserStatsAfterQuiz(userId: string, result: QuizResult): Promise<void> {
+    try {
+      await this.gamificationService.addExperience(userId, result.rewards.experience);
+      
+      if (result.rewards.tickets > 0) {
+        await DatabaseService.updateUserStats(userId, {
+          gachaTickets: result.rewards.tickets
+        });
+      }
+
+      // Check for achievements
+      if (result.score === 100) {
+        await this.gamificationService.checkAchievement(userId, 'perfect_quiz');
+      }
+      
+      if (result.timeSpent < 300) { 
+        await this.gamificationService.checkAchievement(userId, 'speed_thinker');
+      }
+      
+    } catch (error) {
+      console.error('Failed to update user stats:', error);
+    }
+  }
+
+  async processOfflineSubmissions(userId: string): Promise<number> {
+    const offlineSubmissions = await AsyncStorage.getItem('offlineQuizzes') || '[]';
+    const submissions = JSON.parse(offlineSubmissions);
+    
+    let processed = 0;
+    const remaining = [];
+    
+    for (const submission of submissions) {
+      try {
+        await DatabaseService.submitQuizResult(
+          submission.userId, 
+          submission.session.quizId, 
+          submission.result.score, 
+          submission.result.timeSpent
+        );
+        await this.updateUserStatsAfterQuiz(submission.userId, submission.result);
+        processed++;
+      } catch (error) {
+        remaining.push(submission);
+      }
+    }
+    
+    await AsyncStorage.setItem('offlineQuizzes', JSON.stringify(remaining));
+    return processed;
+  }
+
+  async getEnhancedAnalytics(userId: string): Promise<{
+    basic: any; 
+    enhanced: {
+      streakData: { current: number; best: number };
+      averageScore: number;
+      improvementTrend: number;
+      recommendedDifficulty: string;
+    };
+  }> {
+    const basicAnalytics = await this.analyzePerformance(userId, 'latest', {});
+    
+    const quizHistory = await DatabaseService.getUserQuizHistory(userId, 20);
+    const enhancedAnalytics = this.calculateEnhancedMetrics(quizHistory);
+    
+    return {
+      basic: basicAnalytics,
+      enhanced: enhancedAnalytics
+    };
+  }
+
 }
 
 export default new QuizService();
