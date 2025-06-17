@@ -18,6 +18,7 @@ import { currentUserAtom } from '@/store/atoms';
 import { quizSessionAtom, quizProgressAtom, quizTimerAtom } from '@/store/quizAtoms';
 import DatabaseService from '@/services/firebase/database.service';
 import { Quiz, Question, QuizType, DebateQuestion, Philosopher, DebateResult } from '@/types/database.types';
+import { useProgression } from '@/hooks/useProgression';
 
 // Components
 //import QuizTimer from '@/components/quiz/QuizTimer';
@@ -35,7 +36,11 @@ export default function QuizScreen() {
   const route = useRoute();
   const navigation = useNavigation();
   const { quizId, lessonId } = route.params as { quizId: string; lessonId?: string };
-  
+  const { 
+    trackQuizProgress, 
+    completeQuiz,
+    recentRewards 
+  } = useProgression();
   const [user] = useAtom(currentUserAtom);
   const [session, setSession] = useAtom(quizSessionAtom);
   const [progress, setProgress] = useAtom(quizProgressAtom);
@@ -106,6 +111,36 @@ export default function QuizScreen() {
       },
     }));
     
+    const handleQuestionAnswer = async (
+    questionIndex: number, 
+    isCorrect: boolean
+  ) => {
+    await trackQuizProgress(quizId, {
+      questionAnswered: questionIndex,
+      isCorrect,
+      timeSpent: getQuestionTime(),
+      hintsUsed: hintsUsedForQuestion
+    });
+  };
+
+  const handleQuizComplete = async () => {
+    const score = calculateFinalScore();
+    const perfectScore = score === 100;
+    
+    await completeQuiz(
+      quizId, 
+      score, 
+      totalTimeSpent, 
+      perfectScore
+    );
+    
+    navigation.navigate('QuizResults', { 
+      quizId, 
+      score,
+      rewards: recentRewards 
+    });
+  };
+
     // Sprawdź poprawność
     const currentQuestion = session.quiz.questions[session.currentQuestionIndex];
     const isCorrect = selectedAnswers.sort().join(',') === currentQuestion.correctAnswers.sort().join(',');
@@ -362,6 +397,7 @@ const handleDebateResult = useCallback((questionId: string, result: DebateResult
     );
   }
 
+
   return (
     <LinearGradient
       colors={['#0F172A', '#1E293B']}
@@ -430,6 +466,8 @@ const handleDebateResult = useCallback((questionId: string, result: DebateResult
     </LinearGradient>
   );
 }
+
+  
 
 // Helper 
 const animateSuccess = () => {

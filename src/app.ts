@@ -9,6 +9,7 @@ import { detailedLogger, configureCORS } from './middleware/middleware';
 import { initializeFirebase } from './config/firebase.config.ts';
 import enhancedLessonRoutes from './routes/lesson.routes';
 import { createGraphQLYoga, createGraphQLWebSocketServer } from './graphql/yogaServer.ts';
+import { useAppInitialization } from '@/hooks/useAppInitialization';
 
 dotenv.config();
 
@@ -16,6 +17,7 @@ export class CritiQuestAPI {
   private app: Application;
   private port: number;
   private httpServer: any;
+  
 
   constructor() {
     this.app = express();
@@ -26,6 +28,7 @@ export class CritiQuestAPI {
     this.initializeRoutes();
     this.initializeErrorHandling();
   }
+  
 
   private initializeMiddlewares(): void {
     // Security
@@ -37,6 +40,8 @@ export class CritiQuestAPI {
         },
       },
     }));
+
+    const { isInitializing } = useAppInitialization();
 
     this.app.use(compression());
 

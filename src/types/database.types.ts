@@ -1,3 +1,5 @@
+import { ProgressionUpdate } from "@/services/user-progression.service";
+
 export interface UserProfile {
   username: string;
   email: string;
@@ -126,6 +128,119 @@ export interface LessonWithId extends Lesson {
   updatedAt?: number;
 }
 
+//Progress
+export interface ProgressionEvent {
+  id: string;
+  userId: string;
+  type: 'lesson_complete' | 'quiz_complete' | 'level_up' | 'achievement_unlock' | 'milestone_reached' | 'streak_update';
+  timestamp: number;
+  data: {
+    experience?: number;
+    level?: number;
+    lessonId?: string;
+    quizId?: string;
+    achievementId?: string;
+    milestoneId?: string;
+    streak?: number;
+    score?: number;
+    rewards?: Record<string, any>;
+  };
+}
+
+export interface AchievementProgress {
+  achievementId: string;
+  currentValue: number;
+  targetValue: number;
+  completed: boolean;
+  unlockedAt?: number;
+  viewed: boolean;
+}
+
+export interface LevelReward {
+  level: number;
+  rewards: {
+    gachaTickets: number;
+    experience?: number;
+    philosopherId?: string;
+    badgeId?: string;
+  };
+}
+
+export interface UserProgressionStats {
+  dailyExperience: number;
+  weeklyExperience: number;
+  monthlyExperience: number;
+  bestStreak: number;
+  totalPlayTime: number;
+  averageSessionTime: number;
+  favoritePhilosopher?: string;
+  learningStyle?: 'visual' | 'reading' | 'interactive';
+  strongestConcepts: string[];
+  weakestConcepts: string[];
+}
+
+export interface LearningPathProgress {
+  pathId: string;
+  currentStage: number;
+  totalStages: number;
+  completedLessons: string[];
+  completedQuizzes: string[];
+  unlockedBonusContent: string[];
+  pathCompletionPercentage: number;
+}
+
+export interface DailyChallenge {
+  id: string;
+  date: string;
+  type: 'quiz' | 'lesson' | 'debate' | 'reflection';
+  targetId: string;
+  completed: boolean;
+  reward: {
+    experience: number;
+    gachaTickets?: number;
+  };
+}
+
+// Extended User type additions
+export interface ExtendedUserProgression extends UserProgression {
+  learningPaths: Record<string, LearningPathProgress>;
+  dailyChallenges: Record<string, DailyChallenge>;
+  achievementProgress: Record<string, AchievementProgress>;
+  stats: UserProgressionStats;
+}
+
+// Offline progression queue
+export interface QueuedProgressionUpdate {
+  id: string;
+  userId: string;
+  update: ProgressionUpdate;
+  timestamp: number;
+  retryCount: number;
+  lastRetry?: number;
+}
+
+// Analytics types
+export interface ProgressionAnalytics {
+  userId: string;
+  period: 'daily' | 'weekly' | 'monthly';
+  metrics: {
+    experienceGained: number;
+    lessonsCompleted: number;
+    quizzesCompleted: number;
+    perfectScores: number;
+    averageQuizScore: number;
+    timeSpent: number;
+    philosophersUnlocked: number;
+    achievementsEarned: number;
+    streakMaintained: boolean;
+  };
+  insights: {
+    learningVelocity: number; // XP per hour
+    conceptMastery: Record<string, number>; // concept -> mastery percentage
+    engagementScore: number; // 0-100
+    recommendedDifficulty: 'easy' | 'medium' | 'hard';
+  };
+}
 
 //Typy zadań
 

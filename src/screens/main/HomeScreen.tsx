@@ -23,6 +23,8 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { MainTabParamList, RootStackParamList } from '@/navigation/types';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useProgression, useProgressionDisplay } from '@/hooks/useProgression';
+import { ProgressDisplay } from '@/components/progression/ProgressDisplay';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 52) / 2; 
@@ -39,7 +41,24 @@ export default function HomeScreen() {
   const userId = AuthService.currentUser?.uid;
   const { user, loading: userLoading } = useUser(userId || '');
     //const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
+    const { updateStreak, checkMilestones } = useProgression({
+    onMilestone: (milestone) => {
+      showMilestoneModal(milestone);
+    }
+  });
+
+    const {
+    upcomingMilestones,
+    recentActivity
+  } = useProgressionDisplay();
+  useEffect(() => {
+    // Update streak na otwarciu
+    updateStreak();
     
+    // Sprawdź nowe milestone
+    checkMilestones();
+  }, []);
+
   // Rotacja dziennych cytatów
   const philosophicalQuotes = [
     { text: "Wiem, że nic nie wiem", author: "Sokrates" },
@@ -73,6 +92,29 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
+          <ProgressDisplay />
+      
+      {/* Upcoming milestones */}
+      <View style={styles.milestonesSection}>
+        <Text style={styles.sectionTitle}>Upcoming Milestones</Text>
+        {upcomingMilestones.map(milestone => (
+          <MilestoneCard 
+            key={milestone.id} 
+            milestone={milestone} 
+          />
+        ))}
+      </View>
+      
+      {/* Recent activity */}
+      <View style={styles.activitySection}>
+        <Text style={styles.sectionTitle}>Recent Activity</Text>
+        {recentActivity.map(activity => (
+          <ActivityItem 
+            key={activity.id} 
+            activity={activity} 
+          />
+        ))}
+      </View>
           {/* User Info */}
           <View style={styles.header}>
             <View style={styles.userInfo}>
