@@ -7,6 +7,8 @@ import { Express } from 'express';
 import admin from 'firebase-admin';
 import { schema } from './schema.ts';
 import EnhancedLessonService from '../services/lesson.service';
+import { AppError, ErrorType } from '@/middleware/error.middleware.ts';
+import { GraphQLError } from 'graphql';
 
 interface YogaContext {
   user?: admin.auth.DecodedIdToken | null;
@@ -31,6 +33,78 @@ async function getUserFromToken(authorization?: string | null): Promise<admin.au
     return null;
   }
 }
+
+const customMaskedErrors = (error: GraphQLError, message: string, isDev: boolean) => {
+  console.error('GraphQL Error:', {
+    message: error.message,
+    locations: error.locations,
+    path: error.path,
+    originalError: error.originalError,
+    timestamp: new Date().toISOString(),
+  });
+
+  // If it's our custom AppError, preserve the structure
+  if (error.originalError instanceof AppError) {
+    return new GraphQLError(error.originalError.message, {
+      nodes: error.nodes,
+      source: error.source,
+      positions: error.positions,
+      path: error.path,
+      originalError: error.originalError,
+      extensions: {
+        type: error.originalError.type,
+        statusCode: error.originalError.statusCode,
+        ...(error.originalError.details && { details: error.originalError.details }),
+        ...(isDev && { stack: error.originalError.stack }),
+      },
+    });
+  }
+
+  // Handle authentication errors
+  if (error.message.includes('Authentication') || error.message.includes('wymagane uwierzytelnienie')) {
+    return new GraphQLError('Wymagane uwierzytelnienie', {
+      nodes: error.nodes,
+      source: error.source,
+      positions: error.positions,
+      path: error.path,
+      extensions: {
+        type: ErrorType.AUTHENTICATION,
+        statusCode: 401,
+        ...(isDev && { originalMessage: error.message }),
+      },
+    });
+  }
+
+  // Handle validation errors
+  if (error.message.includes('Validation') || error.message.includes('Invalid')) {
+    return new GraphQLError('Błędy walidacji', {
+      nodes: error.nodes,
+      source: error.source,
+      positions: error.positions,
+      path: error.path,
+      extensions: {
+        type: ErrorType.VALIDATION,
+        statusCode: 400,
+        ...(isDev && { originalMessage: error.message }),
+      },
+    });
+  }
+
+  return new GraphQLError(
+    isDev ? error.message : 'Wystąpił nieoczekiwany błąd',
+    {
+      nodes: error.nodes,
+      source: error.source,
+      positions: error.positions,
+      path: error.path,
+      extensions: {
+        type: ErrorType.INTERNAL,
+        statusCode: 500,
+        ...(isDev && { originalMessage: error.message, stack: error.stack }),
+      },
+    }
+  );
+};
 
 export const createGraphQLYoga = () => {
   const yoga = createYoga<{}, YogaContext>({
@@ -88,11 +162,11 @@ export const createGraphQLYoga = () => {
     },
 
     maskedErrors: process.env.NODE_ENV === 'production',
-    
-    cors: {
+    cors: false,
+    /*cors: {
       origin: process.env.CLIENT_URL || ['http://localhost:8081', 'http://localhost:3000'],
       credentials: true,
-    },
+    },*/
   });
 
   return yoga;
@@ -100,7 +174,7 @@ export const createGraphQLYoga = () => {
 
 export function createGraphQLWebSocketServer(
   httpServer: any,
-  yoga: ReturnType<typeof createYoga>
+  yoga: any,
 ) {
   const wsServer = new WebSocketServer({
     server: httpServer,
@@ -128,3 +202,24 @@ export function createGraphQLWebSocketServer(
 
   return { wsServer, serverCleanup };
 }
+
+export const graphqlAsyncHandler = (resolver: any) => {
+  return async (parent: any, args: any, context: any, info: any) => {
+    try {
+      return await resolver(parent, args, context, info);
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw new GraphQLError(error.message, {
+          originalError: error,
+          extensions: {
+            code: error.type,
+            statusCode: error.statusCode,
+            details: error.details,
+          },
+        });
+      }
+      
+      throw error;
+    }
+  };
+};

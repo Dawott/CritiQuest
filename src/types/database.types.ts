@@ -162,6 +162,7 @@ export interface AchievementProgress {
   completed: boolean;
   unlockedAt?: number;
   viewed: boolean;
+  progress: number;
 }
 
 export interface LevelReward {

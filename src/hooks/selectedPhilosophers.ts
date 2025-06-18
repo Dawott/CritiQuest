@@ -40,7 +40,7 @@ export const useSelectedPhilosophers = (user: User | null) => {
             baseStats: ownedData.stats || philosopher.baseStats,
             avatar: '🏛️', // Default avatar
             signature_argument: philosopher.specialAbility.name,
-            rhetoric: Math.round((philosopher.baseStats.language + philosopher.baseStats.social) / 2),
+            rhetoric: Math.round((philosopher.baseStats.rhetoric + philosopher.baseStats.logic) / 2),
           };
         };
 

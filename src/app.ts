@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import dotenv from 'dotenv';
 import { createServer } from 'http';
-import { errorHandler } from './middleware/error.middleware';
+import { errorHandler, notFoundHandler, setupGlobalErrorHandlers } from './middleware/error.middleware.ts';
 import { detailedLogger, configureCORS } from './middleware/middleware';
 import { initializeFirebase } from './config/firebase.config.ts';
 import enhancedLessonRoutes from './routes/lesson.routes';
@@ -17,8 +17,8 @@ export class CritiQuestAPI {
   private app: Application;
   private port: number;
   private httpServer: any;
+  private wsCleanup?: {dispose(): void | Promise<void> };
   
-
   constructor() {
     this.app = express();
     this.httpServer = createServer(this.app);
@@ -29,7 +29,7 @@ export class CritiQuestAPI {
     this.initializeErrorHandling();
   }
   
-
+//middleware
   private initializeMiddlewares(): void {
     // Security
     this.app.use(helmet({
@@ -44,10 +44,6 @@ export class CritiQuestAPI {
     const { isInitializing } = useAppInitialization();
 
     this.app.use(compression());
-
-    const yoga = createGraphQLYoga();
-    this.app.use('/graphql', yoga);
-
     // CORS configuration
     this.app.use(cors(configureCORS()));
 
@@ -62,6 +58,7 @@ export class CritiQuestAPI {
     this.app.set('trust proxy', 1);
   }
 
+  //Serwisy
   private async initializeServices(): Promise<void> {
     try {
       await initializeFirebase();
@@ -71,7 +68,8 @@ export class CritiQuestAPI {
       process.exit(1);
     }
   }
-
+  
+  //Routes
   private initializeRoutes(): void {
     // Health check
      this.app.get('/health', (req, res) => {
@@ -82,17 +80,21 @@ export class CritiQuestAPI {
         environment: process.env.NODE_ENV || 'development',
       });
     });
-
-    // API routes
-    this.app.use('/api/v1/lessons', enhancedLessonRoutes);
-
+    
+    const yoga = createGraphQLYoga();
+    this.app.use('/graphql', yoga);
     this.app.use('*', (req, res) => {
       res.status(404).json({
         success: false,
         error: 'Endpoint not found',
         path: req.originalUrl,
       });
-    });
+    })
+    const { wsServer, serverCleanup } = createGraphQLWebSocketServer(this.httpServer, yoga);
+    this.wsCleanup = serverCleanup;
+    this.app.use('/api/v1/lessons', enhancedLessonRoutes);
+    this.app.use(notFoundHandler);
+    this.app.use(errorHandler);
   }
 
   private initializeErrorHandling(): void {
@@ -101,18 +103,48 @@ export class CritiQuestAPI {
     process.on('SIGINT', this.gracefulShutdown);
   }
 
+  /*
   private gracefulShutdown = (): void => {
     console.log('Received shutdown signal, closing server gracefully...');
     process.exit(0);
   };
-
+*/
   public listen(): void {
+    try {
+    setupGlobalErrorHandlers();
+    this.initializeMiddlewares();
+      this.initializeRoutes();
+      this.initializeServices();
     this.app.listen(this.port, () => {
       console.log(`CritiQuest API running on port ${this.port}`);
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`Firebase connected and ready`);
     });
   }
+  catch (error) {
+      console.error('Failed to start server:', error);
+      process.exit(1);
+    }
+  }
+  private gracefulShutdown = async ():Promise<void> => {
+    console.log('Received shutdown signal, closing server gracefully...');
+    
+    // Clean up WebSocket server
+    if (this.wsCleanup) {
+      try {
+        await this.wsCleanup.dispose();
+        console.log('WebSocket server disposed');
+      } catch (error) {
+        console.error('Error disposing WebSocket server:', error);
+      }
+    }
+    
+    // Close HTTP server
+    this.httpServer.close(() => {
+      console.log('Server closed gracefully');
+      process.exit(0);
+    });
+  };
 }
 
 // Start server

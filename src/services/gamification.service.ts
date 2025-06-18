@@ -1,8 +1,18 @@
 import { string } from 'zod';
 import DatabaseService from './firebase/database.service';
-import { Achievement } from '@/types/database.types';
+import { Achievement, AchievementProgress } from '@/types/database.types';
+
+interface DebateResult {
+  winner: 'user' | 'opponent';
+  totalRounds: number;
+  conviction_score: number;
+  learning_insights: string[];
+  philosophical_growth: { concept: string; understanding: number }[];
+}
 
 export class GamificationService {
+
+  
 async addExperience(userId: string, amount: number): Promise<{
     newLevel: number;
     leveledUp: boolean;
@@ -95,9 +105,14 @@ async addExperience(userId: string, amount: number): Promise<{
       const criteriaCheck = await this.checkAchievementCriteria(userId, achievementDef, context);
       
       if (criteriaCheck.met) {
-        const achievement: Achievement = {
+        const achievement: AchievementProgress = {
+          achievementId: achievementId,
+          currentValue: 100,
+          targetValue: 100,
+          completed: true,
+          viewed: false,
           unlockedAt: Date.now(),
-          progress: 100
+          progress:100
         };
 
         const updates = {
@@ -121,7 +136,7 @@ async addExperience(userId: string, amount: number): Promise<{
 
         return {
           unlocked: true,
-          achievement,
+          achievement: achievementDef,
           wasAlreadyUnlocked: false
         };
       }
@@ -182,65 +197,43 @@ async addExperience(userId: string, amount: number): Promise<{
 
 private checkFeatureUnlocks(level: number): string[] {
     const unlocks: string[] = [];
-
-    const featureUnlocks = {
-      5: 'debate_mode',
-      10: 'advanced_analytics', 
-      15: 'custom_quizzes',
-      20: 'philosopher_teams',
-      25: 'daily_challenges',
-      30: 'leaderboards'
-    };
-
-    if (featureUnlocks[level]) {
-      unlocks.push(featureUnlocks[level]);
-    }
-
+  const featureUnlocks = new Map<number, string>([
+    [5, 'debate_mode'],
+    [10, 'advanced_analytics'],
+    [15, 'custom_quizzes'],
+    [20, 'philosopher_teams'],
+    [25, 'daily_challenges'],
+    [30, 'leaderboards']
+  ]);
+  
+  const feature = featureUnlocks.get(level);
+  if (feature) {
+    unlocks.push(feature);
+  }
     return unlocks;
   }
 
   //Achieve
-  private async getAchievementDefinition(achievementId: string): Promise<any> {
-    // TBD
-    const achievementDefinitions = {
-      'perfect_quiz': {
-        id: 'perfect_quiz',
-        name: 'Doskonałość Filozofa',
-        description: 'Uzyskaj 100% w jakimkolwiek quizie',
-        criteria: { type: 'perfect_score' },
-        rewards: { experience: 100, gachaTickets: 2 }
-      },
-      'speed_thinker': {
-        id: 'speed_thinker', 
-        name: 'Szybki Neuron',
-        description: 'Ukończ quiz w 5 minut',
-        criteria: { type: 'time_limit', maxTime: 300 },
-        rewards: { experience: 50, gachaTickets: 1 }
-      },
-      'debate_master': {
-        id: 'debate_master',
-        name: 'Mistrz Erystyki',
-        description: 'Wygraj 3 debaty',
-        criteria: { type: 'debate_wins', minWins: 3 },
-        rewards: { experience: 150, gachaTickets: 3 }
-      },
-      'philosopher_collector': {
-        id: 'philosopher_collector',
-        name: 'Aleksandria',
-        description: 'Skompletuj 10 filozofów',
-        criteria: { type: 'collection_count', minCount: 10 },
-        rewards: { experience: 200, gachaTickets: 5 }
-      },
-      'weekly_streak': {
-        id: 'weekly_streak',
-        name: 'Praktyka Czyni...',
-        description: 'Ukończ quiz codziennie przez 7 dni',
-        criteria: { type: 'daily_streak', minDays: 7 },
-        rewards: { experience: 300, gachaTickets: 4 }
-      }
-    };
+private achievementCache: Map<string, any> = new Map();
 
-    return achievementDefinitions[achievementId] || null;
+  private async getAchievementDefinition(achievementId: string): Promise<any> {
+    if (this.achievementCache.has(achievementId)) {
+    return this.achievementCache.get(achievementId);
+  }
+
+  try {
+    const achievement = await DatabaseService.read(`achievements/${achievementId}`);
+    
+    // Cache the result
+    if (achievement) {
+      this.achievementCache.set(achievementId, achievement);
+    }
+    
+    return achievement;
+  } catch (error) {
+    console.error(`Failed to fetch achievement definition for ${achievementId}:`, error);
+    return null;
+  }
   }
 
   private async checkAchievementCriteria(
@@ -266,7 +259,7 @@ private checkFeatureUnlocks(level: number): string[] {
 
         case 'debate_wins':
           const debateWins = context?.quizResult?.debateResults ? 
-            Object.values(context.quizResult.debateResults).filter(r => r.winner === 'user').length : 0;
+            Object.values(context.quizResult.debateResults).filter((r: any) => r.winner === 'user').length : 0;
           return { 
             met: debateWins >= criteria.minWins,
             progress: (debateWins / criteria.minWins) * 100
@@ -442,8 +435,8 @@ private checkFeatureUnlocks(level: number): string[] {
     }
   }
 
-  //Dailies
-
+  //Dailies - na razie off - do wdrożenia w przyszłości
+/*
   async generateDailyChallenge(): Promise<{
     type: 'dilemma' | 'paradox' | 'thought_experiment';
     title: string;
@@ -510,7 +503,7 @@ private calculateChallengeRewards(type: string): any {
   }
 
   return baseRewards;
-}
+}*/
 
   //Synergie
 

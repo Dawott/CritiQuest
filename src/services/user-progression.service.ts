@@ -266,7 +266,7 @@ export class UserProgressionService extends EventEmitter {
     
     const updates = {
       [`${progressPath}/questionsAnswered`]: database.ServerValue.increment(1),
-      [`${progressPath}/correctAnswers`]: database.ServerValue.increment(isCorrect ? 1 : 0),
+      [`${progressPath}/correctAnswers`]: database.ServerValue.increment(data.isCorrect ? 1 : 0),
       [`${progressPath}/totalTimeSpent`]: database.ServerValue.increment(data.timeSpent),
       [`${progressPath}/lastUpdated`]: Date.now(),
     };
