@@ -419,12 +419,14 @@ export class QuizService {
       'single': 30,
       'multiple': 45,
       'scenario': 120,
+      'debate': 180,
     };
 
     const difficultyMultiplier = {
       beginner: 1.2,
       intermediate: 1.0,
       advanced: 0.8,
+      expert: 0.5,
     };
 
     const isDifficultyLevel = (d: string): d is Difficulty => {
@@ -586,10 +588,10 @@ export class QuizService {
   async checkNetworkStatus(): Promise<boolean> {
     try {
       const networkState = await NetInfo.fetch();
-      return networkState.isConnected && networkState.isInternetReachable;
+      return (networkState.isConnected ?? false) && (networkState.isInternetReachable ?? false);
     } catch (error) {
       console.error('Network check failed:', error);
-      return false; // Assume offline if check fails
+      return false;
     }
   }
 
@@ -765,16 +767,27 @@ export class QuizService {
   async getEnhancedAnalytics(userId: string): Promise<{
     basic: any; 
     enhanced: {
-      streakData: { current: number; best: number };
-      averageScore: number;
-      improvementTrend: number;
-      recommendedDifficulty: string;
+      learningVelocity: number;
+      conceptMastery: Record<string, number>;
+      difficultyReadiness: 'beginner' | 'intermediate' | 'advanced' | 'expert';
+  philosophicalConsistency: number;
+      //streakData: { current: number; best: number };
+      streakAnalysis: {
+    currentStreak: number;
+    longestStreak: number;
+    streakTrend: 'improving' | 'stable' | 'declining';
+  };
+      engagementScore: number;
+  timeEfficiency: number;
+      //averageScore: number;
+      //improvementTrend: number;
+      //recommendedDifficulty: string;
     };
   }> {
     const basicAnalytics = await this.analyzePerformance(userId, 'latest', {});
     
     const quizHistory = await DatabaseService.getUserQuizHistory(userId, 20);
-    const enhancedAnalytics = this.calculateEnhancedMetrics(quizHistory);
+    const enhancedAnalytics = this.gamificationService.calculateEnhancedMetrics(quizHistory);
     
     return {
       basic: basicAnalytics,

@@ -382,11 +382,15 @@ private achievementCache: Map<string, any> = new Map();
     philosophicalAlignment: string;
   }): Promise<void> {
     try {
+      const userHistory = await DatabaseService.getUserQuizHistory(userId, 10);
       const updates = {
         [`users/${userId}/learningAnalytics`]: {
           ...learningData,
           lastUpdated: Date.now(),
-          learningVelocity: this.calculateLearningVelocity(learningData.lastQuizScore),
+          learningVelocity: this.calculateLearningVelocityFromScore(
+      learningData.lastQuizScore, 
+      userHistory
+    ),
           adaptiveDifficulty: await this.getRecommendedDifficulty(userId, learningData.lastQuizScore)
         }
       };
@@ -398,10 +402,225 @@ private achievementCache: Map<string, any> = new Map();
   }
 
   // Predkosc nauki
-  private calculateLearningVelocity(score: number): number {
-    // Wyżej = szybciej
-    return Math.max(0.5, Math.min(2.0, score / 50));
+  public calculateEnhancedMetrics(quizHistory: any[]): {
+  learningVelocity: number;
+  conceptMastery: Record<string, number>;
+  philosophicalConsistency: number;
+  difficultyReadiness: 'beginner' | 'intermediate' | 'advanced' | 'expert';
+  engagementScore: number;
+  timeEfficiency: number;
+  streakAnalysis: {
+    currentStreak: number;
+    longestStreak: number;
+    streakTrend: 'improving' | 'stable' | 'declining';
+  };
+} {
+  if (quizHistory.length === 0) {
+    return {
+      learningVelocity: 0,
+      conceptMastery: {},
+      philosophicalConsistency: 0,
+      difficultyReadiness: 'beginner',
+      engagementScore: 0,
+      timeEfficiency: 0,
+      streakAnalysis: {
+        currentStreak: 0,
+        longestStreak: 0,
+        streakTrend: 'stable'
+      }
+    };
   }
+
+  // Learning Velocity - improvement rate over time
+  const learningVelocity = this.calculateLearningVelocity(quizHistory);
+  
+  // Concept Mastery - performance by philosophical concept
+  const conceptMastery = this.calculateConceptMastery(quizHistory);
+  
+  // Philosophical Consistency - how consistent user's philosophical alignment is
+  const philosophicalConsistency = this.calculatePhilosophicalConsistency(quizHistory);
+  
+  // Difficulty Readiness - suggest next difficulty level
+  const difficultyReadiness = this.calculateDifficultyReadiness(quizHistory);
+  
+  // Engagement Score - overall engagement level (0-100)
+  const engagementScore = this.calculateEngagementScore(quizHistory);
+  
+  // Time Efficiency - how efficiently user answers questions
+  const timeEfficiency = this.calculateTimeEfficiency(quizHistory);
+  
+  // Streak Analysis - performance consistency patterns
+  const streakAnalysis = this.calculateStreakAnalysis(quizHistory);
+
+  return {
+    learningVelocity,
+    conceptMastery,
+    philosophicalConsistency,
+    difficultyReadiness,
+    engagementScore,
+    timeEfficiency,
+    streakAnalysis
+  };
+}
+
+// Helper
+private calculateLearningVelocity(history: any[]): number {
+  if (history.length < 2) return 0;
+  
+  const recentQuizzes = history.slice(-5); // Ostatnie 5 quizów
+  const earlierQuizzes = history.slice(0, Math.min(5, history.length - 5));
+  
+  const recentAvg = recentQuizzes.reduce((sum, q) => sum + q.score, 0) / recentQuizzes.length;
+  const earlierAvg = earlierQuizzes.length > 0 
+    ? earlierQuizzes.reduce((sum, q) => sum + q.score, 0) / earlierQuizzes.length 
+    : recentAvg;
+  
+  return Math.max(0, recentAvg - earlierAvg); 
+}
+
+private calculateConceptMastery(history: any[]): Record<string, number> {
+  const conceptScores: Record<string, number[]> = {};
+  
+  history.forEach(quiz => {
+    // conceptScores ALBO ekstrakcja z quizów
+    if (quiz.conceptAnalysis) {
+      Object.entries(quiz.conceptAnalysis).forEach(([concept, score]) => {
+        if (!conceptScores[concept]) conceptScores[concept] = [];
+        conceptScores[concept].push(score as number);
+      });
+    }
+  });
+  
+  const mastery: Record<string, number> = {};
+  Object.entries(conceptScores).forEach(([concept, scores]) => {
+    // Calculate mastery as weighted average (recent scores matter more)
+    const weights = scores.map((_, i) => i + 1); // Zwiększenie wagi linearne
+    const weightedSum = scores.reduce((sum, score, i) => sum + score * weights[i], 0);
+    const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+    mastery[concept] = Math.round(weightedSum / totalWeight);
+  });
+  
+  return mastery;
+}
+
+private calculatePhilosophicalConsistency(history: any[]): number {
+  const alignments = history
+    .map(quiz => quiz.philosophicalAlignment)
+    .filter(alignment => alignment);
+  
+  if (alignments.length < 2) return 0;
+  
+  // Calculate how often the same alignment appears
+  const alignmentCounts: Record<string, number> = {};
+  alignments.forEach(alignment => {
+    alignmentCounts[alignment] = (alignmentCounts[alignment] || 0) + 1;
+  });
+  
+  const maxCount = Math.max(...Object.values(alignmentCounts));
+  return Math.round((maxCount / alignments.length) * 100);
+}
+
+private calculateDifficultyReadiness(history: any[]): 'beginner' | 'intermediate' | 'advanced' | 'expert' {
+  const recentScores = history.slice(-3).map(q => q.score);
+  const avgRecent = recentScores.reduce((sum, score) => sum + score, 0) / recentScores.length;
+  if (avgRecent >= 85) return 'expert';
+  if (avgRecent >= 70) return 'advanced';
+  if (avgRecent >= 50) return 'intermediate';
+  return 'beginner';
+}
+
+private calculateEngagementScore(history: any[]): number {
+  let score = 0;
+  
+  // Kompletność (40% of score)
+  const completionRate = history.filter(q => q.completed).length / history.length;
+  score += completionRate * 40;
+  
+  // Ostatnia aktywność (30% of score)
+  const recentQuizzes = history.filter(q => 
+    Date.now() - q.timestamp < 7 * 24 * 60 * 60 * 1000 // Ostatnie 7 dni
+  );
+  const activityScore = Math.min(recentQuizzes.length / 3, 1) * 30; // 3 quizy / tydzień
+  score += activityScore;
+  
+  // Trendy
+  const performanceScore = this.calculateLearningVelocity(history) * 3; // Skala prędkości
+  score += Math.min(performanceScore, 30);
+  
+  return Math.round(Math.min(score, 100));
+}
+
+private calculateTimeEfficiency(history: any[]): number {
+  if (history.length === 0) return 0;
+  
+  const efficiencyScores = history.map(quiz => {
+    if (!quiz.timeLimit || !quiz.timeSpent) return 0;
+    
+    // Efektywność - punkty/minutę
+    const timeRatio = quiz.timeSpent / (quiz.timeLimit * 60);
+    return quiz.score / timeRatio;
+  }).filter(score => score > 0);
+  
+  if (efficiencyScores.length === 0) return 0;
+  
+  return Math.round(
+    efficiencyScores.reduce((sum, score) => sum + score, 0) / efficiencyScores.length
+  );
+}
+
+private calculateLearningVelocityFromScore(
+  currentScore: number, 
+  userHistory?: any[]
+): number {
+  if (!userHistory || userHistory.length === 0) {
+    return Math.max(0, currentScore - 70); // 70 = baseline
+  }
+  
+  // Użyj ostatnich wyników do oceny trendów
+  const recentScores = userHistory.slice(-3).map(q => q.score);
+  const avgRecent = recentScores.reduce((sum, score) => sum + score, 0) / recentScores.length;
+  
+  return Math.max(0, currentScore - avgRecent);
+}
+
+private calculateStreakAnalysis(history: any[]): {
+  currentStreak: number;
+  longestStreak: number;
+  streakTrend: 'improving' | 'stable' | 'declining';
+} {
+  let currentStreak = 0;
+  let longestStreak = 0;
+  let tempStreak = 0;
+  
+  // Streaki na podstawie zaliczonych testów (assumed 70+)
+  const sortedHistory = [...history].sort((a, b) => a.timestamp - b.timestamp);
+  
+  for (let i = sortedHistory.length - 1; i >= 0; i--) {
+    if (sortedHistory[i].score >= 70) {
+      if (i === sortedHistory.length - 1) currentStreak++;
+      tempStreak++;
+      longestStreak = Math.max(longestStreak, tempStreak);
+    } else {
+      if (i === sortedHistory.length - 1) currentStreak = 0;
+      tempStreak = 0;
+    }
+  }
+  
+  
+  // Performance a trendy
+  const recentAvg = history.slice(-3).reduce((sum, q) => sum + q.score, 0) / Math.min(history.length, 3);
+  const olderAvg = history.slice(-6, -3).reduce((sum, q) => sum + q.score, 0) / Math.min(history.length - 3, 3);
+  
+  let streakTrend: 'improving' | 'stable' | 'declining' = 'stable';
+  if (recentAvg > olderAvg + 5) streakTrend = 'improving';
+  else if (recentAvg < olderAvg - 5) streakTrend = 'declining';
+  
+  return {
+    currentStreak,
+    longestStreak,
+    streakTrend
+  };
+}
 
   // Rekomendacja trudności
   private async getRecommendedDifficulty(userId: string, lastScore: number): Promise<{
@@ -540,4 +759,6 @@ private calculateChallengeRewards(type: string): any {
     
     return { synergies, totalBonus };
   }
+
+  
 }

@@ -432,6 +432,7 @@ export class EnhancedLessonService {
       beginner: 1,
       intermediate: 1.5,
       advanced: 2,
+      expert: 3,
     };
     
     const scoreMultiplier = score / 100;
