@@ -26,20 +26,28 @@ export interface UserStats {
 }
 
 export interface Achievement {
-  unlockedAt: number;
-  progress: number;
+  id: string;
+  name: string;
+  description: string;
+  criteria: {
+    type: string;
+    maxTime?: number;
+    minWins?: number;
+    minCount?: number;
+    minDays?: number;
+  },
+  rewards: {
+    experience: number;
+    gachaTickets: number;
+  }
 }
 
 export interface PhilosopherStats {
   logic: number;
-  ethics: number;
-  metaphysics: number;
-  epistemology: number;
-  aesthetics: number;
-  mind: number;
-  language: number;
-  science: number;
-  social: number;
+  wisdom: number;
+  rhetoric: number;
+  influence: number;
+  originality: number;
 }
 
 export interface OwnedPhilosopher {
@@ -80,7 +88,7 @@ export interface Philosopher {
 
 //Typy lekcji
 export type ContentType = 'text' | 'interactive' | 'video';
-export type Difficulty = 'beginner' | 'intermediate' | 'advanced';
+export type Difficulty = 'beginner' | 'intermediate' | 'advanced' | 'expert';
 
 export interface LessonSection {
   type: ContentType;

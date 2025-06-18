@@ -10,7 +10,11 @@
     "test": "jest",
     "prepare": "husky",
     "dev-menu": "SHOW_DEV_MENU=true npm start",
-    "test:components": "jest --testPathPattern=components"
+    "test:components": "jest --testPathPattern=components",
+    "seed": "ts-node seed-database.ts",
+    "seed:dry-run": "ts-node seed-database.ts --dry-run",
+    "seed:dev": "NODE_ENV=development ts-node seed-database.ts",
+    "seed:prod": "NODE_ENV=production ts-node seed-database.ts"
   },
   "dependencies": {
     "@apollo/server": "^4.12.2",

@@ -116,6 +116,163 @@ export const philosophersSeedData: Record<string, Philosopher> = {
         duration: 1
       }
     }
+  },
+  "diogenes": {
+    name: "Diogenes",
+    era: "Starożytność",
+    school: "Cynizm",
+    rarity: Rarity.Epic,
+    baseStats: {
+      wisdom: 90,
+      logic: 70,
+      rhetoric: 70,
+      influence: 85,
+      originality: 95
+    },
+    description: "Kontrowersyjny filozof grecki, twórca szkoły cyników",
+    imageUrl: "./src/assets/Diogenes.jpg",
+    quotes: [
+      "Bieda jest nauczycielką i podporą filozofii, bo do czego filozofia nakłania słowami, do tego bieda zmusza w praktyce.",
+ "Gdybym był zawodnikiem, to czy zbliżając się do mety miałbym zwolnić kroku, czy raczej jeszcze bardziej przyśpieszyć?",
+ "Jedynym państwem dobrze urządzonym byłoby państwo obejmujące cały świat.",
+ "Słońce także kloaki nawiedza, a nie maże się.",
+ "Jestem obywatelem świata."
+    ],
+    specialAbility: {
+      name: "Oto Człowiek!",
+      description: "Niweluje dodatkowe modyfikatory obu graczy",
+      cooldown: 4,
+      effect: {
+        type: "transform",
+        target: "both",
+        duration: 1
+      }
+    }
+  },
+  "socrates": {
+    name: "Sokrates",
+    era: "Starożytność",
+    school: "Etyka",
+    rarity: Rarity.Legendary,
+    baseStats: {
+      wisdom: 100,
+      logic: 85,
+      rhetoric: 90,
+      influence: 90,
+      originality: 80
+    },
+    description: "Rewolucyjny filozof grecki, inspirator wielu nurtów filozoficznych i etyki",
+    imageUrl: "./src/assets/Socrates.jpg",
+    quotes: [
+      "Najmądrzejszy jest, który wie, czego nie wie. ",
+ "Sprawiedliwość jest odmianą mądrości.",
+ "W całym życiu szanuj prawdę tak, by twoje słowa były bardziej wiarygodne od przyrzeczeń innych.",
+ "Wszelka dusza jest nieśmiertelna.",
+ "Ateny są jak ospały koń, a ja jak giez, który próbuje go ożywić."
+    ],
+    specialAbility: {
+      name: "Metoda Sokratejska",
+      description: "Placeholder",
+      cooldown: 4,
+      effect: {
+        type: "transform",
+        target: "both",
+        duration: 1
+      }
+    }
+  },
+  "avicenna": {
+    name: "Awicenna",
+    era: "Wczesne Średniowiecze",
+    school: "Metafizyka",
+    rarity: Rarity.Rare,
+    baseStats: {
+      wisdom: 65,
+      logic: 85,
+      rhetoric: 55,
+      influence: 80,
+      originality: 70
+    },
+    description: "Lekarz i filozof islamski, kontynuujący nauki Arystotelesa. Skupiał się na filozofii natury, metafizyce i kosmologii",
+    imageUrl: "./src/assets/Avicenna.jpg",
+    quotes: [
+      "Przeto odrębność człowieka polega na pojmowaniu i osądzaniu idei ogólnych i wyciąganiu rzeczy nieznanych z nauk i sztuk. To wszystko jest w mocy jednej duszy.",
+ "Lekarz ignorant jest adiutantem śmierci.",
+ "Szerokość życia jest ważniejsza niż długość życia.",
+ "Ten co wie, że wie – tego słuchajcie, ten co wie, że nie wie – tego pouczcie, ten co nie wie, że wie – tego obudźcie, ten co nie wie, że nie wie – tego zostawcie samego sobie."
+    ],
+    specialAbility: {
+      name: "Bóg i Natura",
+      description: "Placeholder",
+      cooldown: 4,
+      effect: {
+        type: "transform",
+        target: "both",
+        duration: 1
+      }
+    }
+  },
+  "camus": {
+    name: "Albert Camus",
+    era: "Współczesność",
+    school: "Absurdyzm",
+    rarity: Rarity.Legendary,
+    baseStats: {
+      wisdom: 70,
+      logic: 85,
+      rhetoric: 80,
+      influence: 85,
+      originality: 85
+    },
+    description: "Pisarz oraz dziennikarz. Jedna z barwniejszych postaci powojennego egzystencjalizmu",
+    imageUrl: "./src/assets/Camus.jpg",
+    quotes: [
+      "Człowiek jest jedynym stworzeniem, które nie godzi się być tym, czym jest.",
+ "Aby wypełnić ludzkie serce, wystarczy walka prowadząca ku szczytom. Trzeba sobie wyobrażać Syzyfa szczęśliwym.",
+ "Przyzwyczajenie się do rozpaczy jest gorsze niż sama rozpacz",
+ "W ludziach więcej rzeczy zasługuje na podziw niż na pogardę."
+    ],
+    specialAbility: {
+      name: "Syzyf",
+      description: "Placeholder",
+      cooldown: 4,
+      effect: {
+        type: "transform",
+        target: "both",
+        duration: 1
+      }
+    }
+  },
+  "locke": {
+    name: "John Locke",
+    era: "Barok",
+    school: "Empiryzm",
+    rarity: Rarity.Epic,
+    baseStats: {
+      wisdom: 90,
+      logic: 80,
+      rhetoric: 60,
+      influence: 85,
+      originality: 80
+    },
+    description: "Jeden z prekursorów klasycznego liberalizmu oraz teorii ekonomicznej. W filozofii rozważał tematy społeczne i naukowe",
+    imageUrl: "./src/assets/Locke.jpg",
+    quotes: [
+      "Nic nie zachodzi bez przyczyny.",
+ "Wolność od absolutnej, arbitralnej władzy jest tak konieczna i ściśle złączona z samozachowaniem człowieka, że ten nie może ich rozdzielić, gdyż utraciłby wtedy samozachowanie wraz z życiem",
+ "Stopień ekscentryczności w społeczeństwie jest proporcjonalny do zawartego w nim geniuszu, materialnego wigoru i odwagi moralnej.",
+ "Naturalną wolnością człowieka jest bycie niezależnym od jakiejkolwiek nadrzędnej władzy na Ziemi oraz niepodleganie woli lub władzy prawodawczej człowieka, ale bycie rządzonym jedynie przez prawo Natury."
+    ],
+    specialAbility: {
+      name: "Zmysł Wewnętrzny",
+      description: "Placeholder",
+      cooldown: 4,
+      effect: {
+        type: "transform",
+        target: "both",
+        duration: 1
+      }
+    }
   }
 };
 
