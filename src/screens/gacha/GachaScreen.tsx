@@ -214,6 +214,16 @@ export default function GachaScreen() {
     return `${days}d ${hours}h`;
   };
 
+  const getRarityBorderStyle = (rarity: string) => {
+  const rarityMap: Record<string, any> = {
+    common: styles.commonBorder,
+    rare: styles.rareBorder,
+    epic: styles.epicBorder,
+    legendary: styles.legendaryBorder,
+  };
+  return rarityMap[rarity] || styles.commonBorder; // fallback
+};
+
   return (
     <SafeAreaView style={styles.container}>
       <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
@@ -377,27 +387,20 @@ export default function GachaScreen() {
           </View>
 
           {/* Recent Pulls */}
-          {pullHistory.length > 0 && (
-            <View style={styles.historyContainer}>
-              <Text style={styles.historyTitle}>Ostatnie zdobycze</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {pullHistory.slice(0, 5).map((pull, index) => (
-                  <View 
-                    key={index} 
-                    style={[
-                      styles.historyItem,
-                      styles[`${pull.rarity}Border`]
-                    ]}
-                  >
-                    <Text style={styles.historyPhilosopher}>
-                      {pull.philosopherName || '???'}
-                    </Text>
-                    <Text style={styles.historyRarity}>{pull.rarity}</Text>
-                  </View>
-                ))}
-              </ScrollView>
-            </View>
-          )}
+          {pullHistory.slice(0, 5).map((pull, index) => (
+  <View
+    key={index}
+    style={[
+      styles.historyItem,
+      getRarityBorderStyle(pull.rarity)
+    ]}
+  >
+    <Text style={styles.historyPhilosopher}>
+      {pull.philosopherName || '???'}
+    </Text>
+    <Text style={styles.historyRarity}>{pull.rarity}</Text>
+  </View>
+))}
         </ScrollView>
 
         {/* Loading Overlay */}

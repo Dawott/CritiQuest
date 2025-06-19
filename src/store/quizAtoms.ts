@@ -1,5 +1,6 @@
 import { atom } from 'jotai';
 import { Quiz, Question, DebateQuestion, DebateResult } from '@/types/database.types';
+import { StoredQuizResult } from '@/services/firebase/quiz-database.service';
 
 export interface QuizSession {
   quizId: string;
@@ -68,4 +69,24 @@ export const scenarioStateAtom = atom<{
 });
 
 // Historia quizu do analityki
-export const quizHistoryAtom = atom<QuizResult[]>([]);
+export const quizHistoryAtom = atom<StoredQuizResult[]>([]);
+
+export const convertToQuizResult = (storedResult: StoredQuizResult): QuizResult => {
+  const totalQuestions = Object.keys(storedResult.answers).length;
+  const correctAnswers = Math.round((storedResult.score / 100) * totalQuestions);
+  const totalPoints = totalQuestions * 10;
+  
+  return {
+    score: storedResult.score,
+    totalPoints,
+    correctAnswers,
+    totalQuestions,
+    timeSpent: storedResult.timeSpent,
+    philosophicalInsights: storedResult.philosophicalInsights,
+    rewards: {
+      experience: storedResult.experience,
+      tickets: storedResult.tickets,
+      newPhilosopher: storedResult.newPhilosopher,
+    }
+  };
+};

@@ -146,7 +146,7 @@ export default function LessonScreen() {
   const handleExitLesson = useCallback(() => {
   if (overallProgress > 0.1) {
     Alert.alert(
-      '🤔 Przerwać lekcję?',
+      'Przerwać lekcję?',
       'Twój postęp zostanie zachowany, ale warto dokończyć, by w pełni zrozumieć koncepcje filozoficzne.',
       [
         { text: 'Kontynuuj naukę', style: 'cancel' },
@@ -306,7 +306,7 @@ useFocusEffect(
     ];
     
     Alert.alert(
-      '✨ Philosophical Enlightenment!',
+      'hilosophical Enlightenment!',
       insights[level % insights.length],
       [{ text: 'Continue Learning', style: 'default' }]
     );

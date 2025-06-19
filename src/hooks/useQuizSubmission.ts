@@ -3,11 +3,51 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useAtom } from 'jotai';
 import { Alert, Platform } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
-import { EnhancedQuizService, QuizSubmissionOptions, QuizCompletionResult } from '@/services/quiz.service';
-import  QuizDatabaseService  from '@/services/firebase/database.service';
+import QuizService from '@/services/quiz.service'; 
+import { QuizDatabaseService, StoredQuizResult } from '@/services/firebase/quiz-database.service'; 
 import { currentUserAtom } from '@/store/atoms';
 import { quizSessionAtom, quizProgressAtom, quizTimerAtom, quizHistoryAtom } from '@/store/quizAtoms';
-import { StoredQuizResult } from '@/types/database.types';
+
+export interface QuizSubmissionOptions {
+  enableOfflineMode?: boolean;
+  retryOnFailure?: boolean;
+  maxRetries?: number;
+  validateAnswers?: boolean;
+}
+
+export interface QuizCompletionResult {
+  success: boolean;
+  result?: StoredQuizResult;
+  error?: string;
+  isOffline?: boolean;
+}
+
+export interface QuizSubmissionState {
+  isSubmitting: boolean;
+  isOffline: boolean;
+  queuedCount: number;
+  lastSubmission?: StoredQuizResult;
+  error?: string;
+}
+
+export interface QuizSubmissionHookOptions {
+  enableOfflineMode?: boolean;
+  autoRetry?: boolean;
+  maxRetries?: number;
+  onSuccess?: (result: StoredQuizResult) => void;
+  onError?: (error: string) => void;
+  onOfflineQueue?: (queuedCount: number) => void;
+  showAlerts?: boolean;
+}
+
+export interface QuizSubmissionActions {
+  submitQuiz: () => Promise<QuizCompletionResult>;
+  retrySubmission: () => Promise<QuizCompletionResult>;
+  processOfflineQueue: () => Promise<number>;
+  clearError: () => void;
+  getSubmissionHistory: (limit?: number) => Promise<StoredQuizResult[]>;
+  getQuizAnalytics: () => Promise<any>;
+}
 
 export interface QuizSubmissionState {
   isSubmitting: boolean;
@@ -50,9 +90,7 @@ export function useQuizSubmission(
     isOffline: false,
     queuedCount: 0
   });
-
-  const quizService = useRef(new EnhancedQuizService());
-  const databaseService = useRef(new QuizDatabaseService());
+const databaseService = useRef(new QuizDatabaseService());
   const lastSubmissionRef = useRef<QuizCompletionResult | null>(null);
 
   const {
@@ -66,19 +104,20 @@ export function useQuizSubmission(
   } = options;
 
   useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener(state => {
+    const unsubscribe = NetInfo.addEventListener(netState => {
       setState(prev => ({
         ...prev,
-        isOffline: !(state.isConnected && state.isInternetReachable)
+        isOffline: !(netState.isConnected && netState.isInternetReachable)
       }));
-
-      if (state.isConnected && state.isInternetReachable && prev.queuedCount > 0) {
-        processOfflineQueue();
-      }
     });
-
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    if (!state.isOffline && state.queuedCount > 0 && !state.isSubmitting) {
+      processOfflineQueue();
+    }
+  }, [state.isOffline, state.queuedCount, state.isSubmitting]);
 
   useEffect(() => {
     if (user) {
@@ -90,7 +129,8 @@ export function useQuizSubmission(
     if (!user) return;
     
     try {
-      const queuedCount = 0;
+      // const queuedCount = await databaseService.current.getOfflineQueueCount(user.profile.email);
+      const queuedCount = 0; // Placeholder
       setState(prev => ({ ...prev, queuedCount }));
     } catch (error) {
       console.error('Failed to check offline queue:', error);
@@ -111,70 +151,45 @@ export function useQuizSubmission(
     }));
 
     try {
-      const submissionOptions: QuizSubmissionOptions = {
-        enableOfflineMode,
-        retryOnFailure: autoRetry,
-        maxRetries,
-        validateAnswers: true
+      const submission = {
+        quizId: session.quizId,
+        lessonId: session.quiz.lessonId,
+        userId: user.profile.email,
+        score: Math.round((progress.criticalThinkingScore / 
+          session.quiz.questions.reduce((sum, q) => sum + q.points, 0)) * 100),
+        timeSpent: timer.elapsed,
+        answers: session.answers,
+        debateResults: session.debateResults,
+        hintsUsed: session.hintsUsed || 0,
+        philosopherBonus: session.philosopherBonus,
+        scenarioPath: session.scenarioPath,
+        metadata: {
+          deviceType: 'android' as const,
+          appVersion: '1.0.0',
+          submittedAt: Date.now(),
+        }
       };
 
-      const result = await quizService.current.submitQuiz(
-        session,
-        progress,
-        timer,
-        user.profile.email,
-        submissionOptions
-      );
+      const result = await databaseService.current.submitCompleteQuizResult(submission);
 
-      lastSubmissionRef.current = result;
+      setState(prev => ({ 
+        ...prev, 
+        lastSubmission: result,
+        queuedCount: 0 // Reset kolejki po sukcesie
+      }));
 
-      if (result.success && result.result) {
-        setState(prev => ({ 
-          ...prev, 
-          lastSubmission: result.result,
-          queuedCount: result.isOffline ? prev.queuedCount + 1 : prev.queuedCount
-        }));
+      setQuizHistory(prev => [result, ...prev]);
+      onSuccess?.(result);
 
-        setQuizHistory(prev => [result.result!, ...prev]);
-
-        onSuccess?.(result.result);
-
-        if (showAlerts && !result.isOffline) {
-          Alert.alert(
-            'Quiz Completed!',
-            `Score: ${result.result.score}%\nExperience: +${result.result.experience}\nTickets: +${result.result.tickets}`,
-            [{ text: 'OK' }]
-          );
-        } else if (showAlerts && result.isOffline) {
-          Alert.alert(
-            'Quiz Saved Offline',
-            'Your quiz will be submitted when connection is restored.',
-            [{ text: 'OK' }]
-          );
-        }
-
-        if (result.isOffline) {
-          onOfflineQueue?.(state.queuedCount + 1);
-        }
-
-      } else {
-        const errorMessage = result.error || 'Unknown submission error';
-        setState(prev => ({ ...prev, error: errorMessage }));
-        onError?.(errorMessage);
-
-        if (showAlerts) {
-          Alert.alert(
-            'Submission Failed',
-            errorMessage,
-            [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Retry', onPress: () => retrySubmission() }
-            ]
-          );
-        }
+      if (showAlerts) {
+        Alert.alert(
+          'Quiz Completed!',
+          `Score: ${result.score}%\nExperience: +${result.experience}\nTickets: +${result.tickets}`,
+          [{ text: 'OK' }]
+        );
       }
 
-      return result;
+      return { success: true, result };
 
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to submit quiz';
@@ -183,9 +198,12 @@ export function useQuizSubmission(
 
       if (showAlerts) {
         Alert.alert(
-          'Error',
+          'Submission Failed',
           errorMessage,
-          [{ text: 'OK' }]
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Retry', onPress: () => retrySubmission() }
+          ]
         );
       }
 
@@ -194,7 +212,7 @@ export function useQuizSubmission(
     } finally {
       setState(prev => ({ ...prev, isSubmitting: false }));
     }
-  }, [user, session, progress, timer, enableOfflineMode, autoRetry, maxRetries, onSuccess, onError, onOfflineQueue, showAlerts]);
+  }, [user, session, progress, timer, onSuccess, onError, showAlerts]);
 
   const retrySubmission = useCallback(async (): Promise<QuizCompletionResult> => {
     if (!lastSubmissionRef.current || lastSubmissionRef.current.success) {
@@ -237,7 +255,7 @@ export function useQuizSubmission(
           [{ text: 'OK' }]
         );
       }
-
+      
       return 0;
 
     } finally {
@@ -251,43 +269,38 @@ export function useQuizSubmission(
 
   const getSubmissionHistory = useCallback(async (limit: number = 10): Promise<StoredQuizResult[]> => {
     if (!user) return [];
-
+    
     try {
-      const history = await databaseService.current.getUserQuizHistory(
-        user.profile.email,
-        limit
-      );
-      
-      setQuizHistory(history);
-      
-      return history;
+      return await databaseService.current.getUserQuizHistory(user.profile.email, limit);
     } catch (error) {
       console.error('Failed to get submission history:', error);
       return [];
     }
-  }, [user, setQuizHistory]);
+  }, [user]);
 
   const getQuizAnalytics = useCallback(async () => {
     if (!user) return null;
-
+    
     try {
-      return await quizService.current.getUserQuizAnalytics(user.profile.email);
+      // return await databaseService.current.getQuizAnalytics(user.profile.email);
+      return null; // Placeholder
     } catch (error) {
       console.error('Failed to get quiz analytics:', error);
       return null;
     }
   }, [user]);
 
-  const actions: QuizSubmissionActions = {
-    submitQuiz,
-    retrySubmission,
-    processOfflineQueue,
-    clearError,
-    getSubmissionHistory,
-    getQuizAnalytics
-  };
-
-  return [state, actions];
+  return [
+    state,
+    {
+      submitQuiz,
+      retrySubmission,
+      processOfflineQueue,
+      clearError,
+      getSubmissionHistory,
+      getQuizAnalytics,
+    }
+  ];
 }
 
 export function useOfflineQuizQueue() {
@@ -295,12 +308,13 @@ export function useOfflineQuizQueue() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [user] = useAtom(currentUserAtom);
 
+  const databaseService = useRef(new QuizDatabaseService());
+
   const checkQueueCount = useCallback(async () => {
     if (!user) return;
-    
     try {
-      const databaseService = new QuizDatabaseService();
-      const count = 0; 
+      // const count = await databaseService.current.getOfflineQueueCount(user.profile.email);
+      const count = 0; // Placeholder
       setQueueCount(count);
     } catch (error) {
       console.error('Failed to check queue count:', error);
@@ -312,8 +326,7 @@ export function useOfflineQuizQueue() {
 
     setIsProcessing(true);
     try {
-      const databaseService = new QuizDatabaseService();
-      const processed = await databaseService.processOfflineSubmissions(user.profile.email);
+      const processed = await databaseService.current.processOfflineSubmissions(user.profile.email);
       setQueueCount(prev => Math.max(0, prev - processed));
       return processed;
     } catch (error) {
@@ -327,7 +340,7 @@ export function useOfflineQuizQueue() {
   useEffect(() => {
     checkQueueCount();
   }, [checkQueueCount]);
-
+/*
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener(state => {
       if (state.isConnected && state.isInternetReachable && queueCount > 0) {
@@ -336,7 +349,7 @@ export function useOfflineQuizQueue() {
     });
 
     return unsubscribe;
-  }, [queueCount, processQueue]);
+  }, [queueCount, processQueue]);*/
 
   return {
     queueCount,

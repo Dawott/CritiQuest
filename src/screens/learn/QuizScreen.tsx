@@ -8,6 +8,8 @@ import {
   ScrollView,
   Animated,
   Dimensions,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -28,6 +30,9 @@ import DebateCard from '@/components/quiz/DebateCard.tsx';
 import QuizResults from '@/components/quiz/QuizResults';
 import PhilosopherHelper from '@/components/quiz/PhilosopherHelper.tsx';
 import { useSelectedPhilosophers, DebatePhilosopher } from '@/hooks/selectedPhilosophers';
+import quizService from '@/services/quiz.service';
+import { useQuizSubmission } from '@/hooks/useQuizSubmission';
+
 
 const { width, height } = Dimensions.get('window');
 
@@ -36,11 +41,6 @@ export default function QuizScreen() {
   const route = useRoute();
   const navigation = useNavigation();
   const { quizId, lessonId } = route.params as { quizId: string; lessonId?: string };
-  const { 
-    trackQuizProgress, 
-    completeQuiz,
-    recentRewards 
-  } = useProgression();
   const [user] = useAtom(currentUserAtom);
   const [session, setSession] = useAtom(quizSessionAtom);
   const [progress, setProgress] = useAtom(quizProgressAtom);
@@ -51,6 +51,19 @@ export default function QuizScreen() {
   const [showHint, setShowHint] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [slideAnim] = useState(new Animated.Value(width));
+  const { 
+    trackQuizProgress, 
+    completeQuiz,
+    recentRewards 
+  } = useProgression();
+  const [submissionState, { submitQuiz }] = useQuizSubmission({
+  onSuccess: (result) => {
+    setShowResults(true);
+  },
+  onError: (error) => {
+    console.error('Submission failed:', error);
+  }
+});
   
   useEffect(() => {
     loadQuiz();
@@ -110,36 +123,6 @@ export default function QuizScreen() {
         [questionId]: selectedAnswers,
       },
     }));
-    
-    const handleQuestionAnswer = async (
-    questionIndex: number, 
-    isCorrect: boolean
-  ) => {
-    await trackQuizProgress(quizId, {
-      questionAnswered: questionIndex,
-      isCorrect,
-      timeSpent: getQuestionTime(),
-      hintsUsed: hintsUsedForQuestion
-    });
-  };
-
-  const handleQuizComplete = async () => {
-    const score = calculateFinalScore();
-    const perfectScore = score === 100;
-    
-    await completeQuiz(
-      quizId, 
-      score, 
-      totalTimeSpent, 
-      perfectScore
-    );
-    
-    navigation.navigate('QuizResults', { 
-      quizId, 
-      score,
-      rewards: recentRewards 
-    });
-  };
 
     // Sprawdź poprawność
     const currentQuestion = session.quiz.questions[session.currentQuestionIndex];
@@ -198,55 +181,44 @@ export default function QuizScreen() {
   };
 
   const finishQuiz = async () => {
-    if (!session || !user) return;
+  if (!session || !user) return;
+  
+  try {
+    const result = quizService.calculateQuizResults(session, progress, timer);
     
-    const totalPoints = session.quiz.questions.reduce((sum, q) => sum + q.points, 0);
-    const earnedPoints = progress.criticalThinkingScore;
-    const score = Math.round((earnedPoints / totalPoints) * 100);
+    const submissionResult = await submitQuiz();
     
-    // Bonus + wynik
-    let experience = Math.round(earnedPoints * 10);
-    let tickets = 0;
-    
-    if (session.philosopherBonus) {
-      experience = Math.round(experience * session.philosopherBonus.multiplier);
+    if (submissionResult.success) {
+      await completeQuiz(
+        quizId,
+        result.score,
+        timer.elapsed,
+        result.score === 100
+      );
+      
+      (navigation as any).navigate('QuizResults', { 
+        quizId, 
+        result: submissionResult.result,
+        rewards: recentRewards,
+        perfectScore: result.score === 100,
+        timeBonus: timer.elapsed < (session.quiz.timeLimit || Infinity) * 0.5
+      });
+    } else {
+      console.error('Zapis nieudany:', submissionResult.error);
+      
+      Alert.alert(
+        'Zapis nieudany',
+        'Quiz nie mógł zostać zapisany, czy chcesz spróbować?',
+        [
+          { text: 'Ponów', onPress: () => finishQuiz() },
+          { text: 'Anuluj', style: 'cancel' }
+        ]
+      );
     }
-    
-    if (score >= session.quiz.passingScore) {
-      tickets = Math.ceil(score / 20); // ticket za wynik >20%
-    }
-    
-    // Nagroda specjalna
-    let newPhilosopher;
-    if (score === 100 && progress.correctStreak === session.quiz.questions.length) {
-      // TBD - nagroda za perfekcyjny wynik to filozof, ale trzeba go dobrać
-      newPhilosopher = await selectRewardPhilosopher();
-    }
-    
-    const result = {
-      score,
-      totalPoints,
-      correctAnswers: progress.questionsAnswered,
-      totalQuestions: session.quiz.questions.length,
-      timeSpent: timer.elapsed,
-      philosophicalInsights: generateInsights(session, progress),
-      rewards: {
-        experience,
-        tickets,
-        newPhilosopher,
-      },
-    };
-    
-    // Submit
-    await DatabaseService.submitQuizResult(
-      user.profile.email,
-      quizId,
-      score,
-      timer.elapsed
-    );
-    
-    setShowResults(true);
-  };
+  } catch (error) {
+    console.error('Nie udało się ukończyć quizu:', error);
+  }
+};
 
 const handleDebateResult = useCallback((questionId: string, result: DebateResult) => {
   if (!session) return;
@@ -312,14 +284,10 @@ const handleDebateResult = useCallback((questionId: string, result: DebateResult
           rarity: 'legendary' as const,
           baseStats: {
             logic: 95,
-            ethics: 100,
-            metaphysics: 85,
-            epistemology: 98,
-            aesthetics: 70,
-            mind: 95,
-            language: 90,
-            science: 75,
-            social: 80,
+            wisdom: 100,
+            rhetoric: 85,
+            influence: 98,
+            originality: 70,
           },
           description: 'Wielki niemiecki myśliciel znany z idei Imperatywu Kategorycznego',
           imageUrl: '',
@@ -454,6 +422,20 @@ const handleDebateResult = useCallback((questionId: string, result: DebateResult
         >
           {renderQuizContent()}
         </Animated.View>
+        {/* Show submission loading state */}
+        {submissionState.isSubmitting && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color="#6366F1" />
+            <Text style={styles.loadingText}>Submitting quiz...</Text>
+          </View>
+        )}
+        
+        {/* Show offline indicator */}
+        {submissionState.isOffline && (
+          <View style={styles.offlineIndicator}>
+            <Text style={styles.offlineText}>Offline - results will sync when connected</Text>
+          </View>
+        )}
 
         {/* Streak*/}
         {progress.correctStreak > 1 && (
@@ -556,5 +538,31 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#F59E0B',
     marginLeft: 8,
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#F3F4F6',
+    marginTop: 12,
+  },
+  offlineIndicator: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    right: 20,
+    backgroundColor: '#F59E0B',
+    padding: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  offlineText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
