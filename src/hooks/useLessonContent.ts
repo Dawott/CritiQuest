@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { atom, useAtom } from 'jotai';
 import { LessonWithId, LessonSection } from '@/types/database.types';
-import { EnhancedLessonService } from '@/services/lesson.service';
+import EnhancedLessonService from '@/services/lesson.service';
 
 interface LessonContentState {
   currentSectionIndex: number;
-  completedSections: Set<number>;
+  completedSections: number[];
   sectionProgress: Record<number, number>;
   startTime: number;
   totalTimeSpent: number;
@@ -13,7 +13,7 @@ interface LessonContentState {
 
 const lessonContentAtom = atom<LessonContentState>({
   currentSectionIndex: 0,
-  completedSections: new Set(),
+  completedSections: [],
   sectionProgress: {},
   startTime: Date.now(),
   totalTimeSpent: 0,
@@ -27,14 +27,14 @@ export const useLessonContent = (lesson: LessonWithId | null) => {
   const sections = lesson?.content.sections.sort((a, b) => a.order - b.order) || [];
   const currentSection = sections[contentState.currentSectionIndex];
   const isLastSection = contentState.currentSectionIndex === sections.length - 1;
-  const canProceed = contentState.completedSections.has(contentState.currentSectionIndex);
+  const canProceed = contentState.completedSections.includes(contentState.currentSectionIndex);
 
   //Reset po zmiane lekcji
   useEffect(() => {
     if (lesson) {
       setContentState({
         currentSectionIndex: 0,
-        completedSections: new Set(),
+        completedSections: [],
         sectionProgress: {},
         startTime: Date.now(),
         totalTimeSpent: 0,
@@ -46,7 +46,9 @@ export const useLessonContent = (lesson: LessonWithId | null) => {
     const index = sectionIndex ?? contentState.currentSectionIndex;
     setContentState(prev => ({
       ...prev,
-      completedSections: new Set([...prev.completedSections, index]),
+      completedSections: prev.completedSections.includes(index) 
+        ? prev.completedSections 
+        : [...prev.completedSections, index],
       sectionProgress: {
         ...prev.sectionProgress,
         [index]: 1,
@@ -104,7 +106,7 @@ export const useLessonContent = (lesson: LessonWithId | null) => {
         contentState.currentSectionIndex,
         {
           timeSpent: totalTimeSpent,
-          sectionsCompleted: contentState.completedSections.size,
+          sectionsCompleted: contentState.completedSections.length,
           totalSections: sections.length,
         }
       );
@@ -121,7 +123,7 @@ export const useLessonContent = (lesson: LessonWithId | null) => {
     const totalSections = sections.length;
     if (totalSections === 0) return 0;
     
-    const completedWeight = contentState.completedSections.size;
+    const completedWeight = contentState.completedSections.length;
     const progressWeight = Object.values(contentState.sectionProgress)
       .reduce((sum, progress) => sum + progress, 0) - completedWeight;
     

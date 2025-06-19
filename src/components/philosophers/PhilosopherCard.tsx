@@ -2,9 +2,10 @@ import React from 'react';
 import {View, Text, Image, TouchableOpacity, StyleSheet} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { Philosopher, Rarity } from '@/types/database.types';
-import PhilosopherRarityBadge from './PhilosopherRarityBadge';
-import { PhilosopherStats } from '@/types/database.types';
+import { PhilosopherRarityBadge } from './PhilosopherRarityBadge.tsx';
+//import { PhilosopherStats } from '@/types/database.types';
 import { PhilosopherStatsSchema } from '@/utils/schemas';
+import { PhilosopherStats } from './PhilosopherStats';
 
 interface PhilosopherCardProps {
     philosopher: Philosopher;

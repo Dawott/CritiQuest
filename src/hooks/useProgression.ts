@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAtom } from 'jotai';
 import { currentUserAtom } from '@/store/atoms';
+import AuthService from '@/services/firebase/auth.service';
 import UserProgressionService, { 
   ProgressionUpdate, 
   ProgressionReward,
@@ -47,7 +48,12 @@ export function useProgression(options: UseProgressionOptions = {}) {
   } = options;
 
   const networkStateRef = useRef<boolean>(true);
-  const syncTimeoutRef = useRef<NodeJS.Timeout>();
+  const syncTimeoutRef = useRef<number | null>(null);
+
+  // Helper do pobierania user ID z firebase'a
+  const getCurrentUserId = useCallback(() => {
+    return AuthService.currentUser?.uid || null;
+  }, []);
 
   // Monitor network
   useEffect(() => {
@@ -66,7 +72,8 @@ export function useProgression(options: UseProgressionOptions = {}) {
     update: ProgressionUpdate,
     immediate: boolean = false
   ) => {
-    if (!currentUser?.id) {
+    const userId = getCurrentUserId();
+    if (!userId) {
       setState(prev => ({ ...prev, error: 'Nikt się nie zalogował' }));
       return;
     }
@@ -85,7 +92,7 @@ export function useProgression(options: UseProgressionOptions = {}) {
       }
 
       const result = await UserProgressionService.updateProgression(
-        currentUser.id,
+        userId,
         update,
         immediate
       );
@@ -124,7 +131,7 @@ export function useProgression(options: UseProgressionOptions = {}) {
         await queueOfflineUpdate(update);
       }
     }
-  }, [currentUser, offlineMode, onLevelUp, onReward, showRewardAlerts]);
+  }, [getCurrentUserId, offlineMode, onLevelUp, onReward, showRewardAlerts]);
 
   const trackLessonProgress = useCallback(async (
     lessonId: string,
@@ -135,18 +142,19 @@ export function useProgression(options: UseProgressionOptions = {}) {
       philosophicalInsights?: string[];
     }
   ) => {
-    if (!currentUser?.id) return;
+    const userId = getCurrentUserId();
+    if (!userId) return;
 
     try {
       await UserProgressionService.trackLessonProgress(
-        currentUser.id,
+        userId,
         lessonId,
         data
       );
     } catch (error) {
-      console.error('Nieudało się załadować postępu:', error);
+      console.error('Nie udało się załadować postępu:', error);
     }
-  }, [currentUser]);
+  }, [getCurrentUserId]);
 
   const trackQuizProgress = useCallback(async (
     quizId: string,
@@ -157,18 +165,19 @@ export function useProgression(options: UseProgressionOptions = {}) {
       hintsUsed?: number;
     }
   ) => {
-    if (!currentUser?.id) return;
+    const userId = getCurrentUserId();
+    if (!userId) return;
 
     try {
       await UserProgressionService.trackQuizProgress(
-        currentUser.id,
+        userId,
         quizId,
         data
       );
     } catch (error) {
       console.error('Nie udało się załadować postępu quizu:', error);
     }
-  }, [currentUser]);
+  }, [getCurrentUserId]);
 
   // Complete lesson
   const completeLesson = useCallback(async (
@@ -213,10 +222,11 @@ export function useProgression(options: UseProgressionOptions = {}) {
 
   // Update daily streak
   const updateStreak = useCallback(async () => {
-    if (!currentUser?.id) return;
+    const userId = getCurrentUserId();
+    if (!userId) return;
 
     try {
-      const result = await UserProgressionService.updateDailyStreak(currentUser.id);
+      const result = await UserProgressionService.updateDailyStreak(userId);
       
       if (result.reward) {
         setState(prev => ({
@@ -233,26 +243,28 @@ export function useProgression(options: UseProgressionOptions = {}) {
       console.error('Nie udało się zapisać streak:', error);
       return 0;
     }
-  }, [currentUser, onReward, showRewardAlerts]);
+  }, [getCurrentUserId, onReward, showRewardAlerts]);
 
   // Get progression summary
   const getProgressionSummary = useCallback(async () => {
-    if (!currentUser?.id) return null;
+    const userId = getCurrentUserId();
+    if (!userId) return null;
 
     try {
-      return await UserProgressionService.getProgressionSummary(currentUser.id);
+      return await UserProgressionService.getProgressionSummary(userId);
     } catch (error) {
       console.error('Nie udało się pobrać podsumowania postępu:', error);
       return null;
     }
-  }, [currentUser]);
+  }, [getCurrentUserId]);
 
   // Check milestones
   const checkMilestones = useCallback(async () => {
-    if (!currentUser?.id) return [];
+    const userId = getCurrentUserId();
+    if (!userId) return [];
 
     try {
-      const milestones = await UserProgressionService.checkMilestones(currentUser.id);
+      const milestones = await UserProgressionService.checkMilestones(userId);
       
       // Notify about newly completed milestones
       milestones.filter(m => m.completed).forEach(milestone => {
@@ -264,62 +276,64 @@ export function useProgression(options: UseProgressionOptions = {}) {
       console.error('Nie udało się sprawdzić milestonesów:', error);
       return [];
     }
-  }, [currentUser, onMilestone]);
+  }, [getCurrentUserId, onMilestone]);
 
   // Offline support functions
   const queueOfflineUpdate = async (update: ProgressionUpdate) => {
+    const userId = getCurrentUserId();
+    if (!userId) return;
+
     try {
-      const key = `@progression_queue_${currentUser?.id}`;
+      const key = `@progression_queue_${userId}`;
       const existingQueue = await AsyncStorage.getItem(key);
       const queue = existingQueue ? JSON.parse(existingQueue) : [];
       
       queue.push({
         ...update,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
       
       await AsyncStorage.setItem(key, JSON.stringify(queue));
     } catch (error) {
-      console.error('Failed to queue offline update:', error);
+      console.error('Nie udało się zapisać offline update:', error);
     }
   };
 
-  const syncPendingUpdates = async () => {
-    if (!currentUser?.id || !networkStateRef.current) return;
+  const syncPendingUpdates = useCallback(async () => {
+    const userId = getCurrentUserId();
+    if (!userId) return;
 
     try {
-      const key = `@progression_queue_${currentUser.id}`;
-      const queueData = await AsyncStorage.getItem(key);
+      const key = `@progression_queue_${userId}`;
+      const queuedUpdates = await AsyncStorage.getItem(key);
       
-      if (!queueData) return;
+      if (!queuedUpdates) return;
       
-      const queue = JSON.parse(queueData) as (ProgressionUpdate & { timestamp: number })[];
+      const updates = JSON.parse(queuedUpdates);
       
-      // Process each queued update
-      for (const update of queue) {
-        await UserProgressionService.updateProgression(currentUser.id, update, true);
+      for (const update of updates) {
+        await UserProgressionService.updateProgression(userId, update, true);
       }
       
-      // Clear queue after successful sync
       await AsyncStorage.removeItem(key);
       
       setState(prev => ({
         ...prev,
         pendingUpdates: []
       }));
+      
     } catch (error) {
-      console.error('Failed to sync pending updates:', error);
+      console.error('Nie udało się zsynchronizować pending updates:', error);
     }
-  };
+  }, [getCurrentUserId]);
 
-  // Show reward alert
   const showRewardAlert = (reward: ProgressionReward) => {
     const rewardText = Object.entries(reward.rewards)
       .map(([key, value]) => {
         switch (key) {
-          case 'gachaTickets': return `${value} biletów`;
+          case 'gachaTickets': return `${value} bilety gacha`;
           case 'experience': return `${value} XP`;
-          case 'philosopherId': return 'Odblokowano nowego filozofa!';
+          case 'philosopherId': return 'Nowy filozof!';
           case 'badgeId': return 'Nowa odznaka!';
           default: return '';
         }
@@ -336,10 +350,11 @@ export function useProgression(options: UseProgressionOptions = {}) {
 
   // Auto-sync on mount if enabled
   useEffect(() => {
-    if (autoSync && currentUser?.id) {
+    const userId = getCurrentUserId();
+    if (autoSync && userId) {
       syncPendingUpdates();
     }
-  }, [autoSync, currentUser?.id]);
+  }, [autoSync, getCurrentUserId, syncPendingUpdates]);
 
   // Cleanup
   useEffect(() => {
@@ -379,13 +394,19 @@ export function useProgressionDisplay() {
   const [summary, setSummary] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  // Helper to get current user ID from Firebase Auth
+  const getCurrentUserId = useCallback(() => {
+    return AuthService.currentUser?.uid || null;
+  }, []);
+
   useEffect(() => {
-    if (!currentUser?.id) return;
+    const userId = getCurrentUserId();
+    if (!userId) return;
 
     const loadSummary = async () => {
       setLoading(true);
       try {
-        const data = await UserProgressionService.getProgressionSummary(currentUser.id);
+        const data = await UserProgressionService.getProgressionSummary(userId);
         setSummary(data);
       } catch (error) {
         console.error('Nie udało się załadować postępu:', error);
@@ -406,7 +427,7 @@ export function useProgressionDisplay() {
     return () => {
       UserProgressionService.off('progressionUpdated', handleUpdate);
     };
-  }, [currentUser?.id]);
+  }, [getCurrentUserId]);
 
   const progressPercentage = summary 
     ? (summary.experience - UserProgressionService['EXP_FOR_LEVEL'](summary.level)) / 

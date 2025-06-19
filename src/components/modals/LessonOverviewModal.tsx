@@ -15,7 +15,7 @@ interface LessonOverviewModalProps {
   visible: boolean;
   lesson: LessonWithId;
   currentSectionIndex: number;
-  completedSections: Set<number>;
+  completedSections: number[];
   onClose: () => void;
   onSectionSelect: (index: number) => void;
 }
@@ -90,7 +90,7 @@ export const LessonOverviewModal: React.FC<LessonOverviewModalProps> = ({
                 style={[
                   styles.sectionItem,
                   index === currentSectionIndex && styles.currentSection,
-                  completedSections.has(index) && styles.completedSection,
+                  completedSections.includes(index) && styles.completedSection,
                 ]}
                 onPress={() => {
                   onSectionSelect(index);
@@ -116,7 +116,7 @@ export const LessonOverviewModal: React.FC<LessonOverviewModalProps> = ({
                     size={20} 
                     color="#9CA3AF" 
                   />
-                  {completedSections.has(index) && (
+                  {completedSections.includes(index) && (
                     <Ionicons name="checkmark-circle" size={16} color="#10B981" />
                   )}
                 </View>

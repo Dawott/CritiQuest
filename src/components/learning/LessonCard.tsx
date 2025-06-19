@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Lesson } from '@/types/database.types';
-import ProgressBar from '@/components/common/ProgressBar';
+import LessonProgressBar from '@/components/common/ProgressBar.tsx';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 interface LessonCardProps {
@@ -35,7 +35,7 @@ export const LessonCard: React.FC<LessonCardProps> = ({
           <Text style={[styles.title, isLocked && styles.lockedText]}>
             {lesson.title}
           </Text>
-          <Text style={[styles.difficulty, styles[lesson.difficulty]]}>
+          <Text style={[styles.difficulty]}>
             {lesson.difficulty}
           </Text>
         </View>
@@ -55,7 +55,7 @@ export const LessonCard: React.FC<LessonCardProps> = ({
       </View>
       
       {!isLocked && progress > 0 && (
-        <ProgressBar progress={progress} style={styles.progressBar} />
+        <LessonProgressBar progress={progress} style={styles.progressBar} />
       )}
       
       <View style={styles.rewards}>

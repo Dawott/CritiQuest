@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { LessonAPI } from '../services/api/lesson.api';
 import { Lesson } from '../types/database.types';
 
@@ -7,24 +7,25 @@ export function useApiLessons(stage?: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  useEffect(() => {
-    const fetchLessons = async () => {
-      try {
-        setLoading(true);
-        const data = await LessonAPI.getLessons({ 
-          stage,
-          includeExternal: true 
-        });
-        setLessons(data);
-      } catch (err) {
-        setError(err as Error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchLessons();
+  const fetchLessons = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await LessonAPI.getLessons({ 
+        stage,
+        includeExternal: true 
+      });
+      setLessons(data);
+    } catch (err) {
+      setError(err as Error);
+    } finally {
+      setLoading(false);
+    }
   }, [stage]);
+
+  useEffect(() => {
+    fetchLessons();
+  }, [fetchLessons]);
 
   return { lessons, loading, error, refetch: fetchLessons };
 }
