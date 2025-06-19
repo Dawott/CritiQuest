@@ -1,8 +1,8 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { CollectionStackParamList } from './types';
-import CollectionHomeScreen from '@/screens/collection/CollectionHomeScreen';
-import PhilosopherListScreen from '@/screens/collection/PhilosopherListScreen';
+import CollectionHomeScreen from '@/screens/collection/CollectionHomeScreen.tsx';
+//import PhilosopherListScreen from '@/screens/collection/PhilosopherListScreen';
 import TeamBuilderScreen from '@/screens/collection/TeamBuilderScreen';
 
 const CollectionStack = createNativeStackNavigator<CollectionStackParamList>();
@@ -25,16 +25,16 @@ export default function CollectionNavigator() {
         component={CollectionHomeScreen}
         options={{ title: 'Mój Gimnazjon' }}
       />
-      <CollectionStack.Screen 
+      {/*<CollectionStack.Screen 
         name="PhilosopherList" 
         component={PhilosopherListScreen}
         options={({ route }) => ({ 
           title: route.params?.filter === 'owned' ? 'Mój Gimnazjon' : 'Filozofowie'
         })}
-      />
+      />*/}
       <CollectionStack.Screen 
         name="TeamBuilder" 
-        component={TeamBuilderScreen}
+       component={TeamBuilderScreen}
         options={{ 
           title: 'Zbuduj Szkołę',
           presentation: 'modal',
