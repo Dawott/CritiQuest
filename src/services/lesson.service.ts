@@ -13,14 +13,14 @@ const LessonCompletionSchema = z.object({
 
 const LessonQuerySchema = z.object({
   stage: z.string().optional(),
-  difficulty: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
+  difficulty: z.enum(['beginner', 'intermediate', 'advanced', 'expert']).optional(),
   limit: z.number().min(1).max(50).optional(),
   offset: z.number().min(0).optional(),
 });
 
 export interface LessonFilters {
   stage?: string;
-  difficulty?: 'beginner' | 'intermediate' | 'advanced';
+  difficulty?: 'beginner' | 'intermediate' | 'advanced' | 'expert';
   userId?: string;
   includeCompleted?: boolean;
 }
@@ -59,6 +59,32 @@ interface LessonAnalytics {
 
 export class EnhancedLessonService {
   private db = EnhancedDatabaseService;
+  private cache = new Map<string, { data: any; expiry: number }>();
+
+private setCache(key: string, data: any, ttlSeconds: number = 3600): void {
+    const expiry = Date.now() + (ttlSeconds * 1000);
+    this.cache.set(key, { data, expiry });
+  }
+
+  private getCache<T>(key: string): T | null {
+    const cached = this.cache.get(key);
+    if (!cached) return null;
+    
+    if (Date.now() > cached.expiry) {
+      this.cache.delete(key);
+      return null;
+    }
+    
+    return cached.data as T;
+  }
+
+  private clearCache(key?: string): void {
+    if (key) {
+      this.cache.delete(key);
+    } else {
+      this.cache.clear();
+    }
+  }
 
   // Pobierz lekcje (z paginacją)
   async getLessons(
@@ -309,8 +335,8 @@ export class EnhancedLessonService {
 
       // Cache
       const cacheKey = `lesson_content_${lessonId}`;
-      await this.cacheService.set(cacheKey, lesson, { ttl: 3600 });
-
+      this.setCache(cacheKey, lesson, 3600 );
+      console.log(`Cache lekcji ${lessonId} powiódł się`);
       // Prefetch media - TBD
       /*
       const videoSections = lesson.content.sections.filter(s => s.type === 'video');

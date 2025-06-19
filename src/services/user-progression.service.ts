@@ -473,7 +473,7 @@ export class UserProgressionService extends EventEmitter {
     update: ProgressionUpdate,
     rewards: ProgressionReward[]
   ): Promise<void> {
-    const analyticsPath = `${DB_PATHS.ANALYTICS}/userProgression/${userId}`;
+    const analyticsPath = `${DB_PATHS.LESSON_ANALYTICS}/userProgression/${userId}`;
     const timestamp = Date.now();
 
     const analyticsUpdate = {

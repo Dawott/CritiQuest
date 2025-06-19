@@ -10,7 +10,8 @@ export const DB_PATHS = {
   LEADERBOARDS: 'leaderboards',
   USER_PROGRESS: 'userProgress',
   GACHA_SYSTEM: 'gachaSystem',
-  ANALYTICS: 'analytics',
+  LESSON_ANALYTICS: 'analytics',
+  USER_PROFILES: 'profile'
 } as const;
 
 export const initializeFirebase = async (): Promise<void> => {

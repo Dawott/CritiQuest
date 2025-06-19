@@ -16,16 +16,68 @@ export interface DatabaseOptions {
 }
 
 export class EnhancedDatabaseService {
-  private db = admin.database();
+  protected db = admin.database();
   private defaultOptions: DatabaseOptions = {
     useTransaction: false,
     retryAttempts: 3,
     timeout: 10000,
   };
-
+// Users
    async getUser(userId: string): Promise<User | null> {
     const snapshot = await this.db.ref(`users/${userId}`).once('value');
     return snapshot.val();
+  }
+
+  async createUser(userId: string, email: string, username: string): Promise<void> {
+    const newUser: User = {
+      profile: {
+        username,
+        email,
+        avatarUrl: '',
+        joinedAt: Date.now(),
+        lastActive: Date.now(),
+      },
+      progression: {
+        level: 1,
+        experience: 0,
+        currentStage: 'introduction',
+        completedLessons: [],
+        unlockedPhilosophers: [],
+      },
+
+      stats: {
+        totalTimeSpent: 0,
+        streakDays: 0,
+        lastStreakUpdate: Date.now(),
+        quizzesCompleted: 0,
+        perfectScores: 0,
+        gachaTickets: 0,
+      },
+      achievements: {},
+      philosopherCollection: {},
+    };
+    await this.db.ref(`users/${userId}`).set(newUser);
+  }
+  async updateUserProfile(userId: string, updates: Partial<UserProfile>): Promise<void> {
+    await this.db.ref(`users/${userId}/profile`).update(updates);
+  }
+
+  async addExperience(userId: string, amount: number): Promise<void> {
+    const userRef = this.db.ref(`users/${userId}`);
+    await this.db.ref().transaction((currentData) => {
+      if (currentData?.users?.[userId]) {
+        const user = currentData.users[userId];
+        user.progression.experience += amount;
+        // Level up logic
+        const experienceForNextLevel = user.progression.level * 100;
+        if (user.progression.experience >= experienceForNextLevel) {
+          user.progression.level += 1;
+          user.progression.experience -= experienceForNextLevel;
+        }
+     return currentData;
+      }
+      return currentData;
+    });
   }
 
   // CRUD
@@ -208,7 +260,7 @@ export class EnhancedDatabaseService {
       updates[completedLessonsPath] = currentCompleted;
     }
     
-    const analyticsPath = `${DB_PATHS.ANALYTICS}/lessons/${lessonId}`;
+    const analyticsPath = `${DB_PATHS.LESSON_ANALYTICS}/lessons/${lessonId}`;
     const currentAnalytics = await this.read<any>(analyticsPath) || {
       completions: 0,
       averageScore: 0,
@@ -243,7 +295,7 @@ export class EnhancedDatabaseService {
     return () => ref.off('value');
   }
 
-  private handleDatabaseError(error: any, operation: string): Error {
+  public handleDatabaseError(error: any, operation: string): Error {
     console.error(`Database ${operation} error:`, error);
     
     const errorMessages: Record<string, string> = {

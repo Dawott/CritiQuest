@@ -48,16 +48,24 @@ export interface QuizAnalytics {
   lastUpdated: number;
 }
 
-export class QuizDatabaseService extends EnhancedDatabaseService {
-  private db = admin.database();
+interface UserLearningAnalytics {
+  recentScores: number[];
+  lastQuizDate: number;
+  conceptStrengths: string[];
+  conceptWeaknesses: string[];
+  averageScore?: number;
+  improvementTrend?: 'improving' | 'stable' | 'declining';
+  lastUpdated?: number;
+}
 
-  async submitQuizResult(submission: QuizSubmission): Promise<StoredQuizResult> {
+export class QuizDatabaseService extends EnhancedDatabaseService {
+  //private db = admin.database();
+
+  async submitCompleteQuizResult(submission: QuizSubmission): Promise<StoredQuizResult> {
     try {
       await this.validateQuizSubmission(submission);
-
       const quiz = await this.getQuiz(submission.quizId);
       if (!quiz) throw new Error('Quiz not found');
-
       const result = await this.calculateQuizResult(submission, quiz);
       
       const storedResult = await this.storeQuizResultWithTransaction(result);
@@ -71,9 +79,7 @@ export class QuizDatabaseService extends EnhancedDatabaseService {
     }
   }
 
-  /**
-   * Get user quiz history with pagination and filtering
-   */
+  // Pobierz historię quizów z paginacją
   async getUserQuizHistory(
     userId: string, 
     limit: number = 10,
@@ -123,7 +129,7 @@ export class QuizDatabaseService extends EnhancedDatabaseService {
    */
   async getQuizAnalytics(quizId: string): Promise<QuizAnalytics> {
     try {
-      const analyticsPath = `${DB_PATHS.ANALYTICS}/quizzes/${quizId}`;
+      const analyticsPath = `${DB_PATHS.LESSON_ANALYTICS}/quizzes/${quizId}`;
       const analytics = await this.read<QuizAnalytics>(analyticsPath);
       
       if (!analytics) {
@@ -157,7 +163,7 @@ export class QuizDatabaseService extends EnhancedDatabaseService {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         await this.delay(Math.pow(2, attempt) * 1000); // Exponential backoff
-        return await this.submitQuizResult(submission);
+        return await this.submitCompleteQuizResult(submission);
       } catch (error) {
         if (attempt === maxRetries) {
           // Store in offline queue for later retry
@@ -183,7 +189,7 @@ export class QuizDatabaseService extends EnhancedDatabaseService {
 
       for (const [id, submission] of submissions) {
         try {
-          await this.submitQuizResult(submission as QuizSubmission);
+          await this.submitCompleteQuizResult(submission as QuizSubmission);
           await offlineRef.child(id).remove();
           processedCount++;
         } catch (error) {
@@ -300,7 +306,7 @@ export class QuizDatabaseService extends EnhancedDatabaseService {
     updates[`${DB_PATHS.USERS}/${result.userId}/stats/gachaTickets`] = admin.database.ServerValue.increment(result.tickets);
 
     // Store global quiz attempt
-    updates[`${DB_PATHS.ANALYTICS}/quizzes/${result.quizId}/attempts/${result.id}`] = {
+    updates[`${DB_PATHS.LESSON_ANALYTICS}/quizzes/${result.quizId}/attempts/${result.id}`] = {
       userId: result.userId,
       score: result.score,
       timeSpent: result.timeSpent,
@@ -330,7 +336,7 @@ export class QuizDatabaseService extends EnhancedDatabaseService {
   private async updateQuizAnalyticsAsync(quizId: string, result: StoredQuizResult): Promise<void> {
     setTimeout(async () => {
       try {
-        const analyticsRef = this.db.ref(`${DB_PATHS.ANALYTICS}/quizzes/${quizId}`);
+        const analyticsRef = this.db.ref(`${DB_PATHS.LESSON_ANALYTICS}/quizzes/${quizId}`);
         
         await runTransaction(analyticsRef, (currentData) => {
           if (!currentData) {
@@ -434,17 +440,24 @@ export class QuizDatabaseService extends EnhancedDatabaseService {
   }
 
   private async updateLearningAnalytics(userId: string, result: StoredQuizResult): Promise<void> {
-    // Update learning path analytics for adaptive difficulty
-    const analyticsPath = `${DB_PATHS.ANALYTICS}/userLearning/${userId}`;
-    const analytics = await this.read(analyticsPath) || {};
-    
-    analytics.recentScores = (analytics.recentScores || []).slice(-9);
-    analytics.recentScores.push(result.score);
-    analytics.lastQuizDate = result.metadata.submittedAt;
-    analytics.conceptStrengths = result.strengths;
-    analytics.conceptWeaknesses = result.weaknesses;
-    
-    await this.update(analyticsPath, analytics);
+    // Update analityki do dynamicznej zmiany trudności
+    const analyticsPath = `${DB_PATHS.LESSON_ANALYTICS}/userLearning/${userId}`;
+    const existingAnalytics = await this.read<UserLearningAnalytics>(analyticsPath);
+  const analytics: UserLearningAnalytics = existingAnalytics || {
+    recentScores: [],
+    lastQuizDate: 0,
+    conceptStrengths: [],
+    conceptWeaknesses: []
+  };
+ 
+  analytics.recentScores = (analytics.recentScores || []).slice(-9);
+  analytics.recentScores.push(result.score);
+  analytics.lastQuizDate = result.metadata.submittedAt;
+  analytics.conceptStrengths = result.strengths;
+  analytics.conceptWeaknesses = result.weaknesses;
+  analytics.lastUpdated = Date.now();
+ 
+  await this.update(analyticsPath, analytics);
   }
 
   private handleSubmissionError(error: any, submission: QuizSubmission): Error {
