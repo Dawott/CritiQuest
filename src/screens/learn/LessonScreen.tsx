@@ -1,4 +1,5 @@
 import { useProgression } from '@/hooks/useProgression';
+import { View } from 'react-native';
 
 export default function LessonScreen() {
   const { lessonId } = route.params;

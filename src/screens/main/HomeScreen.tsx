@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ScrollView,
   View,
@@ -25,6 +25,11 @@ import { CompositeNavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useProgression, useProgressionDisplay } from '@/hooks/useProgression';
 import { ProgressDisplay } from '@/components/progression/ProgressDisplay';
+import { MilestoneModal } from '@/components/modals/MilestoneModal';
+import { ProgressionMilestone } from '@/services/user-progression.service';
+import { MilestoneCard } from '@/components/progression/MilestoneCard';
+import { ActivityItem } from '@/components/progression/ActivityItem';
+import { formatActivityFromEvent, formatActivityTime, RecentActivity } from '@/types/activity.types';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 52) / 2; 
@@ -39,7 +44,18 @@ export default function HomeScreen() {
   const [currentUser] = useAtom(currentUserAtom);
   const isLoading = useAtomValue(isLoadingAtom);
   const userId = AuthService.currentUser?.uid;
+  const [milestoneModalVisible, setMilestoneModalVisible] = useState(false);
+  const [currentMilestone, setCurrentMilestone] = useState<ProgressionMilestone | null>(null);
   const { user, loading: userLoading } = useUser(userId || '');
+  const showMilestoneModal = (milestone: ProgressionMilestone) => {
+    setCurrentMilestone(milestone);
+    setMilestoneModalVisible(true);
+  };
+
+  const closeMilestoneModal = () => {
+    setMilestoneModalVisible(false);
+    setCurrentMilestone(null);
+  };
     //const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
     const { updateStreak, checkMilestones } = useProgression({
     onMilestone: (milestone) => {
@@ -51,6 +67,32 @@ export default function HomeScreen() {
     upcomingMilestones,
     recentActivity
   } = useProgressionDisplay();
+
+  const processedActivity: RecentActivity[] = React.useMemo(() => {
+    if (!recentActivity || !Array.isArray(recentActivity)) {
+      return [];
+    }
+
+    return recentActivity
+      .map((activity: any, index: number) => {
+        // Check format
+        if (activity.icon && activity.title && activity.color) {
+          return {
+            id: activity.id || `activity_${Date.now()}_${index}`,
+            type: activity.type || 'unknown',
+            title: activity.title,
+            timestamp: activity.timestamp || Date.now(),
+            icon: activity.icon,
+            color: activity.color,
+          } as RecentActivity;
+        }
+        
+        // konwersja z surowych ProgressEvents
+        return formatActivityFromEvent(activity);
+      })
+      .slice(0, 5); // pokaż tylko 5 ostatnich aktywności
+  }, [recentActivity]);
+
   useEffect(() => {
     // Update streak na otwarciu
     updateStreak();
@@ -96,8 +138,8 @@ export default function HomeScreen() {
       
       {/* Upcoming milestones */}
       <View style={styles.milestonesSection}>
-        <Text style={styles.sectionTitle}>Upcoming Milestones</Text>
-        {upcomingMilestones.map(milestone => (
+        <Text style={styles.sectionTitle}>Nadchodzące kamienie milowe</Text>
+        {upcomingMilestones.map((milestone: ProgressionMilestone) => (
           <MilestoneCard 
             key={milestone.id} 
             milestone={milestone} 
@@ -107,14 +149,21 @@ export default function HomeScreen() {
       
       {/* Recent activity */}
       <View style={styles.activitySection}>
-        <Text style={styles.sectionTitle}>Recent Activity</Text>
-        {recentActivity.map(activity => (
-          <ActivityItem 
-            key={activity.id} 
-            activity={activity} 
-          />
-        ))}
-      </View>
+            <Text style={styles.sectionTitle}>Ostatnia aktywność</Text>
+            {processedActivity.length > 0 ? (
+              processedActivity.map((activity) => (
+                <ActivityItem 
+                  key={activity.id} 
+                  icon={activity.icon}
+                  title={activity.title}
+                  time={formatActivityTime(activity.timestamp)}
+                  color={activity.color || '#6366F1'}
+                />
+              ))
+            ) : (
+              <Text style={styles.emptyState}>Brak ostatniej aktywności</Text>
+            )}
+          </View>
           {/* User Info */}
           <View style={styles.header}>
             <View style={styles.userInfo}>
@@ -271,6 +320,11 @@ export default function HomeScreen() {
             </View>
           )}
         </ScrollView>
+        <MilestoneModal
+          visible={milestoneModalVisible}
+          milestone={currentMilestone}
+          onClose={closeMilestoneModal}
+        />
       </SafeAreaView>
     </LinearGradient>
   );
@@ -629,5 +683,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#F59E0B',
     marginLeft: 4,
+  },
+   milestonesSection: {
+    marginTop: 32,
+    paddingHorizontal: 20,
+  },
+  activitySection: {
+    marginTop: 32,
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  emptyState: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    paddingVertical: 20,
   },
 });
