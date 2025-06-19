@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import authRoutes from './auth.routes';
+import authRoutes from './auth.routes.ts';
 import lessonRoutes from './lesson.routes';
-import philosopherRoutes from './philosopher.routes';
-import quizRoutes from './quiz.routes';
-import gachaRoutes from './gacha.routes';
-import userRoutes from './user.routes';
+import philosopherRoutes from './philosopher.routes.ts';
+import quizRoutes from './quiz.routes.ts';
+import gachaRoutes from './gacha.routes.ts';
+import userRoutes from './user.routes.ts';
 
 const router = Router();
 
