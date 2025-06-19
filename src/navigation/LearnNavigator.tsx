@@ -1,9 +1,9 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { LearnStackParamList } from './types';
-import LearnHomeScreen from '@/screens/learn/LearnHomeScreen';
-import LessonDetailScreen from '@/screens/learn/LessonDetailScreen';
-import StageSelectScreen from '@/screens/learn/StageSelectScreen';
+import LearnHomeScreen from '@/screens/learn/LearnHomeScreen.tsx';
+import LessonDetailScreen from '@/screens/learn/LessonDetailScreen.tsx';
+import StageSelectScreen from '@/screens/learn/StageSelectScreen.tsx';
 import ScenarioScreen from '@/screens/learn/ScenarioScreen';
 
 const LearnStack = createNativeStackNavigator<LearnStackParamList>();
@@ -26,6 +26,7 @@ export default function LearnNavigator() {
         component={LearnHomeScreen}
         options={{ title: 'Ścieżka Wiedzy' }}
       />
+      
       <LearnStack.Screen 
         name="StageSelect" 
         component={StageSelectScreen}

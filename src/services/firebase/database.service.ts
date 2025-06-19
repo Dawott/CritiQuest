@@ -5,7 +5,8 @@ import {
   Philosopher, 
   Lesson, 
   Quiz,
-  OwnedPhilosopher 
+  OwnedPhilosopher, 
+  LessonWithId
 } from '@/types/database.types';
 import { DB_PATHS, batchWrite, runTransaction } from '@/config/firebase.config';
 
@@ -323,7 +324,7 @@ async getLesson(lessonId: string): Promise<Lesson | null> {
     return snapshot.val();
   }
 
-  async getLessonsByStage(stage: string): Promise<Lesson[]> {
+  async getLessonsByStage(stage: string): Promise<LessonWithId[]> {
     const snapshot = await this.db
       .ref('lessons')
       .orderByChild('stage')
@@ -332,8 +333,14 @@ async getLesson(lessonId: string): Promise<Lesson | null> {
     const lessons = snapshot.val() || {};
 
     return Object.entries(lessons)
-      .map(([id, lesson]) => ({ id, ...lesson as Lesson }))
-      .sort((a, b) => a.order - b.order);
+    .map(([id, lesson]) => ({ 
+      id, 
+      ...lesson as Lesson,
+      source: 'internal' as const,
+      isCompleted: false,
+      userProgress: null,
+    }))
+    .sort((a, b) => a.order - b.order);
   }
 
   async completeLesson(userId: string, lessonId: string): Promise<void> {

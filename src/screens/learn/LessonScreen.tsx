@@ -279,7 +279,7 @@ useFocusEffect(
 
   const calculateScore = () => {
     // Calculate score based on completion and engagement
-    const completionScore = (completedSections.size / sections.length) * 100;
+    const completionScore = (completedSections.length / sections.length) * 100;
     const timeBonus = Math.max(0, 20 - (getTotalTimeSpent() / 60)); // Bonus for efficient learning
     return Math.min(100, completionScore + timeBonus);
   };
@@ -415,7 +415,7 @@ useFocusEffect(
             style={[
               styles.dot,
               index === currentSectionIndex && styles.activeDot,
-              completedSections.has(index) && styles.completedDot,
+              completedSections.includes(index) && styles.completedDot,
             ]}
           />
         ))}
