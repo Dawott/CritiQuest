@@ -12,10 +12,10 @@ import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { LessonWithId } from '@/types/database.types';
-import { EnhancedLessonService } from '@/services/lesson.service';
+import EnhancedLessonService from '@/services/lesson.service';
 import { ContentRenderer } from '@/components/learning/ContentRenderer';
 import { useLessonContent } from '@/hooks/useLessonContent';
-import { ProgressBar } from '@/components/common/ProgressBar';
+import { LessonProgressBar } from '@/components/common/ProgressBar.tsx';
 
 type LessonViewerScreenRouteProp = RouteProp<{
   LessonViewer: { lessonId: string; userId: string };
@@ -77,7 +77,7 @@ export const LessonViewerScreen: React.FC = () => {
           { text: 'Sprawdź', style: 'cancel' },
           { 
             text: 'Podejmij Quiz', 
-            onPress: () => navigation.navigate('Quiz', { 
+            onPress: () => (navigation as any).navigate('Quiz', { 
               lessonId: lesson?.id,
               quizId: lesson?.quiz,
             })
@@ -134,7 +134,7 @@ export const LessonViewerScreen: React.FC = () => {
 
       {/* Progress Bar */}
       <View style={styles.progressContainer}>
-        <ProgressBar progress={overallProgress} />
+        <LessonProgressBar progress={overallProgress} />
         <Text style={styles.progressText}>{Math.round(overallProgress)}% Complete</Text>
       </View>
 

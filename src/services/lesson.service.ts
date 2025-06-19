@@ -87,10 +87,10 @@ private setCache(key: string, data: any, ttlSeconds: number = 3600): void {
   }
 
   // Pobierz lekcje (z paginacją)
-  async getLessons(
+ async getLessons(
     userId: string, 
-    filters: LessonFilters = {},
-    pagination: PaginationOptions = {}
+    filters: LessonFilters = {}, 
+    options: PaginationOptions = {}
   ): Promise<{
     lessons: LessonWithId[];
     total: number;
@@ -98,62 +98,112 @@ private setCache(key: string, data: any, ttlSeconds: number = 3600): void {
     userProgress: Record<string, any>;
   }> {
     try {
-      // walidacja
-      const validatedQuery = LessonQuerySchema.parse(filters);
+      const cacheKey = `lessons_${userId}_${JSON.stringify(filters)}_${JSON.stringify(options)}`;
+      const cached = this.getCache<any>(cacheKey);
+      if (cached) return cached;
+
+      const { limit = 20, offset = 0 } = options;
       
-      const { limit = 20, offset = 0 } = pagination;
-      
-      // User progress z filtrem
-      const userProgress = await this.db.read<Record<string, any>>(
-        `${DB_PATHS.USER_PROGRESS}/${userId}`
-      ) || {};
-      
-      const completedLessons = await this.getUserCompletedLessons(userId);
-      
-      // query lekcji
-      let lessonsQuery = await this.db.query<Lesson>(
-        DB_PATHS.LESSONS,
-        'order',
-        undefined,
-        undefined
-      );
-      
-      let lessons = Object.entries(lessonsQuery).map(([id, lesson]) => ({
+      // Get all lessons
+      const lessonsData = await this.db.read<Record<string, Lesson>>(DB_PATHS.LESSONS);
+      if (!lessonsData) {
+        return { lessons: [], total: 0, hasMore: false, userProgress: {} };
+      }
+
+      // Convert to array with IDs
+      let lessons: LessonWithId[] = Object.entries(lessonsData).map(([id, lesson]) => ({
         id,
         ...lesson,
-      })) as LessonWithId[];
-      
-      // filtry
+        source: 'internal' as const,
+      }));
+
+      // Apply filters
       if (filters.stage) {
         lessons = lessons.filter(lesson => lesson.stage === filters.stage);
       }
-      
       if (filters.difficulty) {
         lessons = lessons.filter(lesson => lesson.difficulty === filters.difficulty);
       }
-      
-      if (!filters.includeCompleted) {
-        lessons = lessons.filter(lesson => !completedLessons.includes(lesson.id));
+
+      // Get user progress for all lessons
+      const userProgressData = await this.db.read<Record<string, any>>(
+        `${DB_PATHS.USER_PROGRESS}/${userId}`
+      );
+
+      // Add progress to lessons
+      lessons = lessons.map(lesson => ({
+        ...lesson,
+        userProgress: userProgressData?.[lesson.id] || null,
+        isCompleted: userProgressData?.[lesson.id]?.completedAt ? true : false,
+      }));
+
+      // Filter completed lessons if needed
+      if (filters.includeCompleted === false) {
+        lessons = lessons.filter(lesson => !lesson.isCompleted);
       }
-      
-      // paginacja
+
+      // Sort by order
+      lessons.sort((a, b) => a.order - b.order);
+
       const total = lessons.length;
       const paginatedLessons = lessons.slice(offset, offset + limit);
-      
-      const enrichedLessons = await this.enrichLessonsWithProgress(paginatedLessons, userId);
-      
-      return {
-        lessons: enrichedLessons,
+      const hasMore = offset + limit < total;
+
+      const result = {
+        lessons: paginatedLessons,
         total,
-        hasMore: offset + limit < total,
-        userProgress,
+        hasMore,
+        userProgress: userProgressData || {},
       };
+
+      this.setCache(cacheKey, result, 900); // 15 minutes cache
+      return result;
+
     } catch (error) {
-      throw new Error(`Nie udało się pobrać lekcji: ${getErrorMessage(error)}`);
+      throw new Error(`Failed to get lessons: ${getErrorMessage(error)}`);
     }
   }
 
   // Pobierz jedną lekcję
+  async getLesson(lessonId: string, userId?: string): Promise<LessonWithId | null> {
+    try {
+      const cacheKey = `lesson_${lessonId}_${userId || 'guest'}`;
+      const cached = this.getCache<LessonWithId>(cacheKey);
+      if (cached) return cached;
+
+      // Pobierz dane lekcji
+      const lessonPath = `${DB_PATHS.LESSONS}/${lessonId}`;
+      const lessonData = await this.db.read<Lesson>(lessonPath);
+      
+      if (!lessonData) {
+        return null;
+      }
+
+      // Pobierz progres gdy mamy userId
+      let userProgress = null;
+      if (userId) {
+        const progressPath = `${DB_PATHS.USER_PROGRESS}/${userId}/${lessonId}`;
+        userProgress = await this.db.read<any>(progressPath);
+      }
+
+      const lesson: LessonWithId = {
+        id: lessonId,
+        ...lessonData,
+        userProgress,
+        isCompleted: userProgress?.completedAt ? true : false,
+        source: 'internal' as const,
+      };
+
+      // Cache rezultatu
+      this.setCache(cacheKey, lesson, 1800); // 30 minut cache
+      return lesson;
+
+    } catch (error) {
+      console.error(`Failed to get lesson ${lessonId}:`, error);
+      throw new Error(`Failed to load lesson: ${getErrorMessage(error)}`);
+    }
+  }
+  /*
   async getLesson(lessonId: string, userId?: string): Promise<LessonWithId | null> {
     try {
       const lesson = await this.db.read<Lesson>(`${DB_PATHS.LESSONS}/${lessonId}`);
@@ -182,7 +232,9 @@ private setCache(key: string, data: any, ttlSeconds: number = 3600): void {
     } catch (error) {
       throw new Error(`Nie udało się pobrać lekcji: ${getErrorMessage(error)}`);
     }
-  }
+  }*/
+
+    
 
   // tracking
   async completeLesson(
@@ -528,4 +580,8 @@ private setCache(key: string, data: any, ttlSeconds: number = 3600): void {
   }
 }
 
-export default new EnhancedLessonService();
+const enhancedLessonService = new EnhancedLessonService();
+export default enhancedLessonService;
+
+//export type { EnhancedLessonService };
+export { EnhancedLessonService as EnhancedLessonServiceClass };
