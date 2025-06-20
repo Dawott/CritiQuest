@@ -3,7 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { CollectionStackParamList } from './types';
 import CollectionHomeScreen from '@/screens/collection/CollectionHomeScreen.tsx';
 //import PhilosopherListScreen from '@/screens/collection/PhilosopherListScreen';
-import TeamBuilderScreen from '@/screens/collection/TeamBuilderScreen';
+import TeamBuilderScreen from '@/screens/collection/TeamBuilderScreen.tsx';
 
 const CollectionStack = createNativeStackNavigator<CollectionStackParamList>();
 

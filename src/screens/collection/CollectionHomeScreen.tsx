@@ -20,11 +20,14 @@ import { currentUserAtom } from '@/store/atoms';
 import DatabaseService from '@/services/firebase/database.service';
 import { Philosopher, OwnedPhilosopher, Rarity } from '@/types/database.types';
 import AuthService from '@/services/firebase/auth.service';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '@/navigation/types';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 60) / 2;
 
 interface PhilosopherCard extends Philosopher {
+  id: string;
   owned?: OwnedPhilosopher;
   isOwned: boolean;
 }
@@ -57,7 +60,7 @@ const schoolColors: Record<string, string[]> = {
 };
 
 export default function CollectionHomeScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [user] = useAtom(currentUserAtom);
   
   const [philosophers, setPhilosophers] = useState<PhilosopherCard[]>([]);
@@ -364,7 +367,7 @@ export default function CollectionHomeScreen() {
       >
         <TouchableOpacity
           activeOpacity={0.8}
-          onPress={() => navigation.navigate('PhilosopherDetail' as any, { philosopherId: item.name })}
+          onPress={() => navigation.navigate('PhilosopherDetail', { philosopherId: item.id })}
         >
           <LinearGradient
             colors={item.isOwned ? rarityGradients[item.rarity] : ['#374151', '#1F2937']}
@@ -404,7 +407,7 @@ export default function CollectionHomeScreen() {
                 styles.philosopherName,
                 !item.isOwned && styles.lockedText,
               ]}>
-                {item.isOwned ? item.name : '???'}
+                {item.isOwned ? item.id : '???'}
               </Text>
               <Text style={[
                 styles.philosopherEra,
@@ -505,7 +508,7 @@ export default function CollectionHomeScreen() {
           <FlatList
             data={filteredPhilosophers}
             renderItem={renderPhilosopherCard}
-            keyExtractor={(item) => item.name}
+            keyExtractor={(item) => item.id}
             numColumns={2}
             scrollEnabled={false}
             columnWrapperStyle={styles.gridRow}
