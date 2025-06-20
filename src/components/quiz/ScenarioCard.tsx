@@ -206,7 +206,7 @@ export default function ScenarioCard({
           {/* Wizualna reprezentacja konsekwencji */}
           <View style={styles.visualDilemma}>
             <LottieView
-              source={require('@/assets/animations/dilemma.json')}
+              source={require('../assets/animations/stars.json')}
               autoPlay
               loop
               style={styles.dilemmaAnimation}

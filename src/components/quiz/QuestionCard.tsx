@@ -289,7 +289,7 @@ export default function QuestionCard({
         {submitted && selectedAnswers.sort().join(',') === question.correctAnswers.sort().join(',') && (
           <View style={styles.successContainer}>
             <LottieView
-              source={require('@/assets/animations/success.json')}
+              source={require('../assets/animations/magic-orb.json')}
               autoPlay
               loop={false}
               style={styles.successAnimation}

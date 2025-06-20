@@ -146,7 +146,7 @@ export default function QuizResults({ result, onRetry, onExit }: QuizResultsProp
           {/* Celebration Animation */}
           {result.score >= 80 && (
             <LottieView
-              source={require('@/assets/animations/confetti.json')}
+              source={require('../assets/animations/celebration.json')}
               autoPlay
               loop={false}
               style={styles.celebrationAnimation}
