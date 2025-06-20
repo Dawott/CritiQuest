@@ -13,7 +13,7 @@
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "baseUrl": "./",
-    "types": ["node"],
+    "types": ["node", "jest", "@jest/globals", "react-native", "react"],
     "paths": {
       "@/*": ["src/*"],
       "@components/*": ["src/components/*"],
