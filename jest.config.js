@@ -9,6 +9,7 @@ module.exports = {
   //setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    "^react-native$": "<rootDir>/node_modules/react-native",
   },
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',

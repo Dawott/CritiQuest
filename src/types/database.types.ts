@@ -1,5 +1,3 @@
-import { ProgressionUpdate } from "@/services/user-progression.service";
-
 export interface UserProfile {
   username: string;
   email: string;
@@ -62,7 +60,7 @@ export interface User {
   profile: UserProfile;
   progression: UserProgression;
   stats: UserStats;
-  achievements: Record<string, Achievement>;
+  achievements: Record<string, AchievementProgress>;
   philosopherCollection: Record<string, OwnedPhilosopher>;
 }
 
@@ -134,6 +132,46 @@ export interface LessonWithId extends Lesson {
   featured?: boolean;
   createdAt?: number;
   updatedAt?: number;
+}
+//Nadchodzące eventy
+export interface ProgressionMilestone {
+  id: string;
+  name: string;
+  description: string;
+  requiredValue: number;
+  currentValue: number;
+  completed: boolean;
+  reward: {
+    type: 'milestone';
+    rewards: {
+      experience?: number;
+      gachaTickets?: number;
+      philosopherId?: string;
+      badgeId?: string;
+    };
+    message: string;
+  };
+}
+
+export interface ProgressionReward {
+  type: 'level_up' | 'achievement' | 'milestone' | 'streak' | 'lesson_complete';
+  rewards: {
+    experience?: number;
+    gachaTickets?: number;
+    philosopherId?: string;
+    badgeId?: string;
+  };
+  message: string;
+}
+
+export interface ProgressionUpdate {
+  experience?: number;
+  lessonsCompleted?: string[];
+  quizzesCompleted?: number;
+  timeSpent?: number;
+  philosophersUnlocked?: string[];
+  achievementsEarned?: string[];
+  customData?: Record<string, any>;
 }
 
 //Progress
