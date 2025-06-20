@@ -59,7 +59,7 @@ export const lessonsSeedData: Record<string, Lesson> = {
     difficulty: Difficulty.Beginner,
     estimatedTime: 15,
     philosophicalConcepts: ["dichotomy-of-control", "virtue-ethics", "cosmic-perspective", "preferred-indifferents"],
-    requiredPhilosopher: undefined,
+    requiredPhilosopher: "marcus-aurelius",
     content: {
       sections: [
         {

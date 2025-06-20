@@ -1,22 +1,24 @@
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getDatabase } from 'firebase-admin/database';
-import { philosophersSeedData, PhilosopherSchema, Rarity } from './philosophers.seed';
+import { philosophersSeedData, PhilosopherSchema } from './philosophers.seed';
 import { lessonsSeedData, LessonSchema } from './lessons.seed';
 import { quizzesSeedData, QuizSchema, debateArgumentsSeedData, DebateArgumentSchema } from './quizzes.seed';
 import { achievementsSeedData, AchievementSchema } from './achievements.seed';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const initializeFirebase = () => {
   try {
     initializeApp({
-      credential: cert({
+      /* credential: cert({
         // Option 1: Use environment variables
-        projectId: process.env.FIREBASE_PROJECT_ID,
+       projectId: process.env.FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
         privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      }),
+      }),*/
       // Option 2: Use service account file
-      // credential: cert('./path-to-your-service-account-key.json'),
-      //databaseURL: process.env.FIREBASE_DATABASE_URL || 'https://your-project.firebaseio.com'
+       credential: cert('./critiquest-cert.json'),
+      databaseURL: process.env.FIREBASE_DATABASE_URL
     });
     
     console.log('✅ Firebase initialized successfully');
@@ -28,6 +30,7 @@ const initializeFirebase = () => {
 };
 
 // Validate data before seeding
+/*
 const validateData = <T>(data: Record<string, T>, schema: any, dataType: string): boolean => {
   console.log(`\n🔍 Validating ${dataType} data...`);
   
@@ -43,7 +46,7 @@ const validateData = <T>(data: Record<string, T>, schema: any, dataType: string)
   console.log(`✅ All ${dataType} data validated successfully`);
   return true;
 };
-
+*/
 // Seed philosophers data
 const seedPhilosophers = async (db: any) => {
   console.log('\n📚 Seeding philosophers...');

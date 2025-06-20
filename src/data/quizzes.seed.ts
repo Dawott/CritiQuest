@@ -247,7 +247,7 @@ export const debateArgumentsSeedData: Record<string, DebateArgument> = {
     weakness_against: ["arg-existential-freedom", "arg-social-determinism"],
     school_bonus: ["Stoicyzm"],
     conviction_power: 75,
-    requires_philosopher: undefined
+    requires_philosopher: "marcus-aurelius"
   },
   
   "arg-existential-freedom": {
@@ -269,7 +269,7 @@ export const debateArgumentsSeedData: Record<string, DebateArgument> = {
     weakness_against: ["arg-free-will-stoic", "arg-pragmatic-freedom"],
     school_bonus: ["Teoria Krytyczna", "Marksizm"],
     conviction_power: 70,
-    requires_philosopher: undefined
+    requires_philosopher: "camus"
   }
 };
 

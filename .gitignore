@@ -81,3 +81,4 @@ storybook.log
 
 **/serviceAccountKey.json
 **/*.serviceaccount.json
+critiquest-cert.json

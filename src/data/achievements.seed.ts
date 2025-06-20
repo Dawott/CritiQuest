@@ -162,7 +162,7 @@ export const achievementsSeedData: Record<string, Achievement> = {
   // Streak & Consistency Achievements
   "daily-thinker": {
     id: "daily-thinker",
-    name: "Praktyka Czyni...",
+    name: "Praktyka Czyni",
     description: "Ukończ quiz codziennie przez 7 dni",
     criteria: {
       type: "daily_streak",
