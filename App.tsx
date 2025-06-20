@@ -1,4 +1,25 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { Provider as JotaiProvider } from 'jotai';
+import MainNavigator from '@/navigation/MainNavigator';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
+export default function App() {
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <JotaiProvider>
+          <NavigationContainer>
+            <MainNavigator />
+          </NavigationContainer>
+        </JotaiProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
+  );
+}
+
+/*import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -17,35 +38,35 @@ const App = () => {
   const [completedCases, setCompletedCases] = useState(7);
 
   const philosophers = [
-    { id: 1, name: 'Socrates', rarity: 'Legendary', unlocked: true },
-    { id: 2, name: 'Aristotle', rarity: 'Epic', unlocked: true },
+    { id: 1, name: 'Sokrates', rarity: 'Legendary', unlocked: true },
+    { id: 2, name: 'Arystoteles', rarity: 'Epic', unlocked: true },
     { id: 3, name: 'Kant', rarity: 'Epic', unlocked: true },
     { id: 4, name: 'Nietzsche', rarity: 'Rare', unlocked: false },
-    { id: 5, name: 'Descartes', rarity: 'Common', unlocked: true },
+    { id: 5, name: 'Kartezjusz', rarity: 'Common', unlocked: true },
   ];
 
   const casestudies = [
     {
       id: 1,
-      title: 'The Trolley Problem',
-      difficulty: 'Beginner',
-      topic: 'Ethics',
+      title: 'Problem Wagonika',
+      difficulty: 'Początkujący',
+      topic: 'Etyka',
       completed: true,
       xp: 150,
     },
     {
       id: 2,
-      title: 'Ship of Theseus',
-      difficulty: 'Intermediate',
-      topic: 'Identity',
+      title: 'Statek Tezeusza',
+      difficulty: 'Średniozaawansowany',
+      topic: 'Ontologia',
       completed: true,
       xp: 200,
     },
     {
       id: 3,
-      title: 'The Cave Allegory',
-      difficulty: 'Advanced',
-      topic: 'Reality',
+      title: 'Alegoria Jaskini',
+      difficulty: 'Zaawansowany',
+      topic: 'Epistemologia',
       completed: false,
       xp: 300,
     },
@@ -83,12 +104,12 @@ const App = () => {
   const HomeView = () => (
     <ScrollView style={styles.content}>
       <View style={styles.hero}>
-        <Text style={styles.heroTitle}>Welcome to CritiQuest</Text>
+        <Text style={styles.heroTitle}>CritiQuest</Text>
         <Text style={styles.heroSubtitle}>
-          Master Critical Thinking Through Interactive Philosophy
+          Opanuj Myślenie Krytyczne za pomocą Filozofii
         </Text>
         <Text style={styles.heroDescription}>
-          Explore philosophical dilemmas, collect legendary thinkers, and level up your reasoning skills!
+          Odkrywaj filozoficzne dylematy, zbieraj legendarnych myślicieli i rozwijaj swoje umiejętności rozumowania!
         </Text>
       </View>
 
@@ -99,11 +120,11 @@ const App = () => {
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statNumber}>{userXP}</Text>
-          <Text style={styles.statLabel}>Total XP</Text>
+          <Text style={styles.statLabel}>Punkty doświadczenia</Text>
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statNumber}>{completedCases}</Text>
-          <Text style={styles.statLabel}>Cases Solved</Text>
+          <Text style={styles.statLabel}>Rozwiązane Przypadki</Text>
         </View>
       </View>
 
@@ -111,7 +132,7 @@ const App = () => {
         style={styles.primaryButton}
         onPress={() => setCurrentView('learn')}
       >
-        <Text style={styles.primaryButtonText}>Start Learning</Text>
+        <Text style={styles.primaryButtonText}>Zacznij Naukę</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -119,7 +140,7 @@ const App = () => {
   const LearnView = () => (
     <ScrollView style={styles.content}>
       <Text style={styles.sectionTitle}>Case Studies</Text>
-      <Text style={styles.sectionSubtitle}>Interactive philosophical scenarios to challenge your thinking</Text>
+      <Text style={styles.sectionSubtitle}>Interaktywne scenariusze filozoficzne rzucające wyzwanie twojemu myśleniu</Text>
 
       {casestudies.map((case_study) => (
         <TouchableOpacity key={case_study.id} style={styles.caseCard}>
@@ -134,10 +155,10 @@ const App = () => {
               <Text style={styles.badgeText}>{case_study.difficulty}</Text>
             </View>
           </View>
-          <Text style={styles.caseTopic}>Topic: {case_study.topic}</Text>
-          <Text style={styles.caseXP}>Reward: {case_study.xp} XP</Text>
+          <Text style={styles.caseTopic}>Temat: {case_study.topic}</Text>
+          <Text style={styles.caseXP}>Nagroda: {case_study.xp} XP</Text>
           {case_study.completed && (
-            <Text style={styles.completedText}>✓ Completed</Text>
+            <Text style={styles.completedText}>✓ Skończono</Text>
           )}
         </TouchableOpacity>
       ))}
@@ -146,8 +167,8 @@ const App = () => {
 
   const CollectionView = () => (
     <ScrollView style={styles.content}>
-      <Text style={styles.sectionTitle}>Philosopher Collection</Text>
-      <Text style={styles.sectionSubtitle}>Collect legendary thinkers and unlock their wisdom</Text>
+      <Text style={styles.sectionTitle}>Kolekcja Filozofów</Text>
+      <Text style={styles.sectionSubtitle}>Zbierz legendarnych myślicieli i odblokuj ich mądrość</Text>
 
       <View style={styles.philosophersGrid}>
         {philosophers.map((philosopher) => (
@@ -181,14 +202,14 @@ const App = () => {
       </View>
 
       <TouchableOpacity style={styles.gachaButton}>
-        <Text style={styles.gachaButtonText}>🎲 Summon Philosopher (100 XP)</Text>
+        <Text style={styles.gachaButtonText}>🎲 Przyzwij Filozofa (1 bilet)</Text>
       </TouchableOpacity>
     </ScrollView>
   );
 
   const ProfileView = () => (
     <ScrollView style={styles.content}>
-      <Text style={styles.sectionTitle}>Your Progress</Text>
+      <Text style={styles.sectionTitle}>Twój Postęp</Text>
       
       <View style={styles.profileHeader}>
         <View style={styles.profileAvatar}>
@@ -196,32 +217,32 @@ const App = () => {
         </View>
         <View style={styles.profileInfo}>
           <Text style={styles.profileName}>Demo Critic</Text>
-          <Text style={styles.profileLevel}>Level {userLevel} Philosopher</Text>
+          <Text style={styles.profileLevel}>Level {userLevel} Filozofa</Text>
         </View>
       </View>
 
       <View style={styles.progressSection}>
-        <Text style={styles.progressTitle}>Level Progress</Text>
+        <Text style={styles.progressTitle}>Postęp Poziomu</Text>
         <View style={styles.progressBar}>
           <View style={[styles.progressFill, { width: '65%' }]} />
         </View>
-        <Text style={styles.progressText}>{userXP}/2000 XP to Level {userLevel + 1}</Text>
+        <Text style={styles.progressText}>{userXP}/2000 XP do poziomu {userLevel + 1}</Text>
       </View>
 
       <View style={styles.achievementsSection}>
-        <Text style={styles.achievementsTitle}>Recent Achievements</Text>
+        <Text style={styles.achievementsTitle}>Ostatnie Osiągnięcia</Text>
         <View style={styles.achievement}>
           <Text style={styles.achievementIcon}>🏆</Text>
           <View>
-            <Text style={styles.achievementName}>First Steps</Text>
-            <Text style={styles.achievementDesc}>Complete your first case study</Text>
+            <Text style={styles.achievementName}>Pierwsze Kroki</Text>
+            <Text style={styles.achievementDesc}>Ukończ swoje pierwsze studium przypadku</Text>
           </View>
         </View>
         <View style={styles.achievement}>
           <Text style={styles.achievementIcon}>🧠</Text>
           <View>
-            <Text style={styles.achievementName}>Deep Thinker</Text>
-            <Text style={styles.achievementDesc}>Solve 5 case studies</Text>
+            <Text style={styles.achievementName}>Głębokie Myślenie</Text>
+            <Text style={styles.achievementDesc}>Rozwiąż 5 case studies</Text>
           </View>
         </View>
       </View>
@@ -611,4 +632,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default App;
+export default App;*/

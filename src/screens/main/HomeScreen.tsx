@@ -47,6 +47,7 @@ export default function HomeScreen() {
   const [milestoneModalVisible, setMilestoneModalVisible] = useState(false);
   const [currentMilestone, setCurrentMilestone] = useState<ProgressionMilestone | null>(null);
   const { user, loading: userLoading } = useUser(userId || '');
+  
   const showMilestoneModal = (milestone: ProgressionMilestone) => {
     setCurrentMilestone(milestone);
     setMilestoneModalVisible(true);
@@ -56,14 +57,14 @@ export default function HomeScreen() {
     setMilestoneModalVisible(false);
     setCurrentMilestone(null);
   };
-    //const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
-    const { updateStreak, checkMilestones } = useProgression({
+
+  const { updateStreak, checkMilestones } = useProgression({
     onMilestone: (milestone) => {
       showMilestoneModal(milestone);
     }
   });
 
-    const {
+  const {
     upcomingMilestones,
     recentActivity
   } = useProgressionDisplay();
@@ -75,7 +76,7 @@ export default function HomeScreen() {
 
     return recentActivity
       .map((activity: any, index: number) => {
-        // Check format
+        // Check if already formatted
         if (activity.icon && activity.title && activity.color) {
           return {
             id: activity.id || `activity_${Date.now()}_${index}`,
@@ -87,250 +88,199 @@ export default function HomeScreen() {
           } as RecentActivity;
         }
         
-        // konwersja z surowych ProgressEvents
+        // Convert from raw ProgressEvents
         return formatActivityFromEvent(activity);
       })
-      .slice(0, 5); // pokaż tylko 5 ostatnich aktywności
+      .slice(0, 5); // Show only 5 recent activities
   }, [recentActivity]);
 
+  // Effect to check for milestones on mount
   useEffect(() => {
-    // Update streak na otwarciu
-    updateStreak();
-    
-    // Sprawdź nowe milestone
-    checkMilestones();
-  }, []);
+    if (user) {
+      checkMilestones();
+    }
+  }, [user, checkMilestones]);
 
-  // Rotacja dziennych cytatów
-  const philosophicalQuotes = [
-    { text: "Wiem, że nic nie wiem", author: "Sokrates" },
-    { text: "Myślę, więc jestem", author: "Kartezjusz" },
-    { text: "Człowiek jest skazany na wolność", author: "Sartre" },
-    { text: "To, co nas nie zabije, czyni nas silniejszymi", author: "Nietzsche" },
-  ];
-  
-  const todaysQuote = philosophicalQuotes[new Date().getDay() % philosophicalQuotes.length];
-
-  if (userLoading || isLoading) {
+  if (isLoading || userLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#6366F1" />
+        <Text style={styles.loadingText}>Ładowanie...</Text>
       </View>
     );
   }
 
-  const userLevel = user?.progression?.level || 1;
-  const userExp = user?.progression?.experience || 0;
-  const expForNextLevel = userLevel * 100;
-  const expProgress = userExp / expForNextLevel;
+  const renderWelcomeSection = () => (
+    <LinearGradient
+      colors={['#6366F1', '#8B5CF6', '#EC4899']}
+      style={styles.welcomeGradient}
+    >
+      <View style={styles.header}>
+        <View style={styles.userInfo}>
+          <View style={styles.avatarContainer}>
+            <Text style={styles.avatarText}>
+              {user?.profile?.username?.charAt(0).toUpperCase() || 'U'}
+            </Text>
+          </View>
+          <View style={styles.userDetails}>
+            <Text style={styles.welcomeText}>Witaj z powrotem,</Text>
+            <Text style={styles.userName}>
+              {user?.profile?.username || 'Filozofie'}
+            </Text>
+          </View>
+        </View>
+        <TouchableOpacity 
+          style={styles.notificationButton}
+          onPress={() => {/* Handle notifications */}}
+        >
+          <Ionicons name="notifications-outline" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Daily streak or inspiration */}
+      <View style={styles.dailySection}>
+        <Text style={styles.dailyQuote}>
+          "Niezbadane życie nie jest warte życia" - Sokrates
+        </Text>
+      </View>
+    </LinearGradient>
+  );
+
+  const renderQuickActions = () => (
+    <View style={styles.quickActionsSection}>
+      <Text style={styles.sectionTitle}>Szybkie Akcje</Text>
+      <View style={styles.quickActionsGrid}>
+        <QuickActionCard
+          icon="book-outline"
+          iconSet="Ionicons"
+          title="Kontynuuj Naukę"
+          subtitle="Wróć do lekcji"
+          color="#10B981"
+          onPress={() => navigation.navigate('Nauka')}
+        />
+        <QuickActionCard
+          icon="dice-multiple-outline"
+          iconSet="MaterialCommunityIcons"
+          title="Wyrocznia"
+          subtitle="Odkryj filozofa"
+          color="#8B5CF6"
+          onPress={() => navigation.navigate('Wyrocznia')}
+        />
+        <QuickActionCard
+          icon="people-outline"
+          iconSet="Ionicons"
+          title="Gimnazjon"
+          subtitle="Twoja kolekcja"
+          color="#F59E0B"
+          onPress={() => navigation.navigate('Gimnazjon')}
+        />
+        <QuickActionCard
+          icon="trophy-outline"
+          iconSet="Ionicons"
+          title="Wyzwanie"
+          subtitle="Dzienny quiz"
+          color="#EF4444"
+          onPress={() => {/* Navigate to daily quiz */}}
+        />
+      </View>
+    </View>
+  );
+
+  const renderProgressSection = () => (
+    <View style={styles.progressSection}>
+      <Text style={styles.sectionTitle}>Twój Postęp</Text>
+      <View style={styles.progressCards}>
+        <ProgressCard
+          icon="flame"
+          label="Seria"
+          value={user?.stats?.streakDays || 0}
+          total={user?.stats?.totalTimeSpent || 1}
+          color="#F59E0B"
+        />
+        <ProgressCard
+          icon="trophy"
+          label="Poziom"
+          value={user?.progression?.level|| 1}
+          total={(user?.progression?.level || 1) + 1}
+          color="#10B981"
+        />
+        <ProgressCard
+          icon="people"
+          label="Filozofowie"
+          value={Object.keys(user?.philosopherCollection || {}).length}
+          total={50} 
+          color="#8B5CF6"
+        />
+      </View>
+    </View>
+  );
+
+  const renderRecentActivity = () => (
+    <View style={styles.activitySection}>
+      <Text style={styles.sectionTitle}>Ostatnia Aktywność</Text>
+      {processedActivity.length > 0 ? (
+        <View style={styles.activityList}>
+          {processedActivity.map((activity, index) => (
+             <ActivityItem 
+              key={activity.id || index} 
+              icon={activity.icon}
+              title={activity.title}
+              time={formatActivityTime(activity.timestamp)}
+              color={activity.color}
+            />
+          ))}
+        </View>
+      ) : (
+        <Text style={styles.emptyState}>
+          Rozpocznij swoją filozoficzną podróż!
+        </Text>
+      )}
+    </View>
+  );
+
+  const renderUpcomingMilestones = () => (
+    upcomingMilestones && upcomingMilestones.length > 0 && (
+      <View style={styles.milestonesSection}>
+        <Text style={styles.sectionTitle}>Nadchodzące Osiągnięcia</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {upcomingMilestones.slice(0, 3).map((milestone: ProgressionMilestone, index: number) => (
+            <TouchableOpacity 
+            key={milestone.id || `milestone-${index}`} 
+            onPress={() => showMilestoneModal(milestone)}
+            activeOpacity={0.8}
+          >
+            <MilestoneCard milestone={milestone} />
+          </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+    )
+  );
 
   return (
-    <LinearGradient
-      colors={['#0F172A', '#1E293B', '#334155']}
-      style={styles.container}
-    >
-      <SafeAreaView style={styles.safeArea}>
-        <ScrollView 
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
-          <ProgressDisplay />
-      
-      {/* Upcoming milestones */}
-      <View style={styles.milestonesSection}>
-        <Text style={styles.sectionTitle}>Nadchodzące kamienie milowe</Text>
-        {upcomingMilestones.map((milestone: ProgressionMilestone) => (
-          <MilestoneCard 
-            key={milestone.id} 
-            milestone={milestone} 
-          />
-        ))}
-      </View>
-      
-      {/* Recent activity */}
-      <View style={styles.activitySection}>
-            <Text style={styles.sectionTitle}>Ostatnia aktywność</Text>
-            {processedActivity.length > 0 ? (
-              processedActivity.map((activity) => (
-                <ActivityItem 
-                  key={activity.id} 
-                  icon={activity.icon}
-                  title={activity.title}
-                  time={formatActivityTime(activity.timestamp)}
-                  color={activity.color || '#6366F1'}
-                />
-              ))
-            ) : (
-              <Text style={styles.emptyState}>Brak ostatniej aktywności</Text>
-            )}
-          </View>
-          {/* User Info */}
-          <View style={styles.header}>
-            <View style={styles.userInfo}>
-              <TouchableOpacity 
-                style={styles.avatarContainer}
-                onPress={() => navigation.jumpTo('Profil')}
-              >
-                <LinearGradient
-                  colors={['#6366F1', '#8B5CF6']}
-                  style={styles.avatarGradient}
-                >
-                  <Text style={styles.avatarText}>
-                    {user?.profile?.username?.charAt(0).toUpperCase() || 'U'}
-                  </Text>
-                </LinearGradient>
-              </TouchableOpacity>
-              
-              <View style={styles.userDetails}>
-                <Text style={styles.welcomeText}>Witaj ponownie,</Text>
-                <Text style={styles.username}>{user?.profile?.username || 'Filozofie'}</Text>
-                <View style={styles.levelContainer}>
-                  <Text style={styles.levelText}>Poziom {userLevel}</Text>
-                  <View style={styles.expBar}>
-                    <View style={[styles.expFill, { width: `${expProgress * 100}%` }]} />
-                  </View>
-                </View>
-              </View>
-            </View>
-            
-            {/* Streak Counter */}
-            <TouchableOpacity style={styles.streakContainer}>
-              <Ionicons name="flame" size={24} color="#F59E0B" />
-              <Text style={styles.streakText}>{user?.stats?.streakDays || 0}</Text>
-            </TouchableOpacity>
-          </View>
+    <SafeAreaView style={styles.container}>
+      <ScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {renderWelcomeSection()}
+        {renderQuickActions()}
+        {renderProgressSection()}
+        {renderRecentActivity()}
+        {renderUpcomingMilestones()}
+      </ScrollView>
 
-          {/* Dzienne cytaty */}
-          <TouchableOpacity 
-            style={styles.quoteCard}
-            activeOpacity={0.9}
-          >
-            <LinearGradient
-              colors={['rgba(99, 102, 241, 0.1)', 'rgba(139, 92, 246, 0.1)']}
-              style={styles.quoteGradient}
-            >
-              <Ionicons name="chatbubble-ellipses" size={20} color="#8B5CF6" style={styles.quoteIcon} />
-              <Text style={styles.quoteText}>"{todaysQuote.text}"</Text>
-              <Text style={styles.quoteAuthor}>- {todaysQuote.author}</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {/* Szybkie akcje */}
-          <View style={styles.quickActions}>
-            <QuickActionCard
-              icon="book"
-              title="Kontynuuj naukę"
-              subtitle="Etyka: Lekcja 3"
-              color="#10B981"
-              onPress={() => navigation.jumpTo('Nauka')}
-            />
-            <QuickActionCard
-              icon="dice-multiple"
-              iconSet="MaterialCommunityIcons"
-              title="Wyrocznia"
-              subtitle={`${user?.stats?.gachaTickets || 0} biletów`}
-              color="#F59E0B"
-              onPress={() => navigation.jumpTo('Wyrocznia')}
-            />
-          </View>
-
-          {/* Progres */}
-          <View style={styles.progressSection}>
-            <Text style={styles.sectionTitle}>Twój postęp</Text>
-            <View style={styles.progressCards}>
-              <ProgressCard
-                icon="school"
-                label="Ukończone lekcje"
-                value={user?.progression?.completedLessons?.length || 0}
-                total={50}
-                color="#6366F1"
-              />
-              <ProgressCard
-                icon="people"
-                label="Gimnazjon"
-                value={Object.keys(user?.philosopherCollection || {}).length}
-                total={30}
-                color="#8B5CF6"
-              />
-              <ProgressCard
-                icon="trophy"
-                label="Osiągnięcia"
-                value={Object.keys(user?.achievements || {}).length}
-                total={25}
-                color="#F59E0B"
-              />
-            </View>
-          </View>
-
-          {/* Dailies */}
-          <TouchableOpacity 
-            style={styles.dailyChallenge}
-            onPress={() => navigation.jumpTo('Nauka')}
-          >
-            <LinearGradient
-              colors={['#DC2626', '#EF4444']}
-              style={styles.challengeGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-            >
-              <View style={styles.challengeContent}>
-                <Ionicons name="calendar" size={32} color="#FFFFFF" />
-                <View style={styles.challengeText}>
-                  <Text style={styles.challengeTitle}>Wyzwanie dnia</Text>
-                  <Text style={styles.challengeSubtitle}>
-                    Dylemat wagonika: Kant vs Utylitaryzm
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={24} color="#FFFFFF" />
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {/* Gacha Banner */}
-          {user?.philosopherCollection && Object.keys(user.philosopherCollection).length > 0 && (
-            <View style={styles.featuredSection}>
-              <Text style={styles.sectionTitle}>Wyróżniony filozof</Text>
-              <TouchableOpacity 
-                style={styles.featuredPhilosopher}
-                onPress={() => navigation.jumpTo('Gimnazjon')}
-              >
-                <LinearGradient
-                  colors={['rgba(251, 191, 36, 0.1)', 'rgba(245, 158, 11, 0.1)']}
-                  style={styles.featuredGradient}
-                >
-                  <View style={styles.philosopherCircle}>
-                    <Text style={styles.philosopherEmoji}>🏛️</Text>
-                  </View>
-                  <View style={styles.philosopherInfo}>
-                    <Text style={styles.philosopherName}>Arystoteles</Text>
-                    <Text style={styles.philosopherSchool}>Perypatetyzm</Text>
-                    <View style={styles.philosopherStats}>
-                      <View style={styles.statBadge}>
-                        <Ionicons name="brain" size={12} color="#F59E0B" />
-                        <Text style={styles.statText}>95</Text>
-                      </View>
-                      <View style={styles.statBadge}>
-                        <Ionicons name="heart" size={12} color="#F59E0B" />
-                        <Text style={styles.statText}>88</Text>
-                      </View>
-                    </View>
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          )}
-        </ScrollView>
-        <MilestoneModal
-          visible={milestoneModalVisible}
-          milestone={currentMilestone}
-          onClose={closeMilestoneModal}
-        />
-      </SafeAreaView>
-    </LinearGradient>
+      <MilestoneModal
+        visible={milestoneModalVisible}
+        milestone={currentMilestone}
+        onClose={closeMilestoneModal}
+      />
+    </SafeAreaView>
   );
 }
 
-// Helpery
+// Helper Components
 function QuickActionCard({ 
   icon, 
   iconSet = 'Ionicons',
@@ -340,7 +290,7 @@ function QuickActionCard({
   onPress 
 }: {
   icon: string;
-  iconSet?: string;
+  iconSet?: 'Ionicons' | 'MaterialCommunityIcons';
   title: string;
   subtitle: string;
   color: string;
@@ -393,8 +343,9 @@ function ProgressCard({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#0F172A',
   },
-  safeArea: {
+  scrollView: {
     flex: 1,
   },
   scrollContent: {
@@ -406,13 +357,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#0F172A',
   },
+  loadingText: {
+    color: '#94A3B8',
+    marginTop: 16,
+    fontSize: 16,
+  },
+  
+  // Welcome Section
+  welcomeGradient: {
+    paddingTop: 20,
+    paddingBottom: 32,
+    paddingHorizontal: 20,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
+    marginBottom: 20,
   },
   userInfo: {
     flexDirection: 'row',
@@ -420,107 +381,72 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   avatarContainer: {
-    marginRight: 12,
-  },
-  avatarGradient: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 12,
   },
   avatarText: {
-    fontSize: 24,
-    fontWeight: '700',
     color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '600',
   },
   userDetails: {
     flex: 1,
   },
   welcomeText: {
+    color: '#FFFFFF',
     fontSize: 14,
-    color: '#94A3B8',
+    opacity: 0.9,
   },
-  username: {
+  userName: {
+    color: '#FFFFFF',
     fontSize: 20,
-    fontWeight: '600',
-    color: '#F1F5F9',
-    marginTop: 2,
+    fontWeight: '700',
   },
-  levelContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  levelText: {
-    fontSize: 12,
-    color: '#CBD5E1',
-    marginRight: 8,
-  },
-  expBar: {
-    flex: 1,
-    height: 4,
-    backgroundColor: '#334155',
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  expFill: {
-    height: '100%',
-    backgroundColor: '#6366F1',
-    borderRadius: 2,
-  },
-  streakContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1E293B',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  notificationButton: {
+    width: 40,
+    height: 40,
     borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  streakText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#F59E0B',
-    marginLeft: 4,
+  dailySection: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    padding: 16,
   },
-  quoteCard: {
-    marginHorizontal: 20,
-    marginTop: 20,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  quoteGradient: {
-    padding: 20,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.2)',
-  },
-  quoteIcon: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    opacity: 0.5,
-  },
-  quoteText: {
+  dailyQuote: {
+    color: '#FFFFFF',
     fontSize: 16,
     fontStyle: 'italic',
-    color: '#E2E8F0',
+    textAlign: 'center',
     lineHeight: 24,
-    marginBottom: 8,
   },
-  quoteAuthor: {
-    fontSize: 14,
-    color: '#94A3B8',
-    textAlign: 'right',
-  },
-  quickActions: {
-    flexDirection: 'row',
+
+  // Quick Actions
+  quickActionsSection: {
     paddingHorizontal: 20,
     marginTop: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#F1F5F9',
+    marginBottom: 16,
+  },
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
     gap: 12,
   },
   quickActionCard: {
-    flex: 1,
+    width: CARD_WIDTH,
     backgroundColor: '#1E293B',
     borderRadius: 16,
     padding: 16,
@@ -546,15 +472,11 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     textAlign: 'center',
   },
+
+  // Progress Section
   progressSection: {
     marginTop: 32,
     paddingHorizontal: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#F1F5F9',
-    marginBottom: 16,
   },
   progressCards: {
     flexDirection: 'row',
@@ -596,108 +518,26 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 2,
   },
-  dailyChallenge: {
-    marginHorizontal: 20,
-    marginTop: 24,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  challengeGradient: {
-    padding: 20,
-  },
-  challengeContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  challengeText: {
-    flex: 1,
-    marginHorizontal: 16,
-  },
-  challengeTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  challengeSubtitle: {
-    fontSize: 14,
-    color: '#FEE2E2',
-  },
-  featuredSection: {
-    marginTop: 32,
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  featuredPhilosopher: {
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  featuredGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.2)',
-    borderRadius: 16,
-  },
-  philosopherCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  philosopherEmoji: {
-    fontSize: 32,
-  },
-  philosopherInfo: {
-    flex: 1,
-  },
-  philosopherName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#F1F5F9',
-    marginBottom: 4,
-  },
-  philosopherSchool: {
-    fontSize: 14,
-    color: '#94A3B8',
-    marginBottom: 8,
-  },
-  philosopherStats: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  statBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#F59E0B',
-    marginLeft: 4,
-  },
-   milestonesSection: {
-    marginTop: 32,
-    paddingHorizontal: 20,
-  },
+
+  // Activity Section
   activitySection: {
     marginTop: 32,
     paddingHorizontal: 20,
-    marginBottom: 20,
+  },
+  activityList: {
+    gap: 8,
   },
   emptyState: {
-    fontSize: 14,
     color: '#64748B',
+    fontSize: 14,
     textAlign: 'center',
     fontStyle: 'italic',
     paddingVertical: 20,
+  },
+
+  // Milestones Section
+  milestonesSection: {
+    marginTop: 32,
+    paddingHorizontal: 20,
   },
 });
