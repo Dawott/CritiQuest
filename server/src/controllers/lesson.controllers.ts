@@ -1,8 +1,8 @@
 import { Response } from 'express';
 import { z } from 'zod';
-import { AuthRequest } from '../../server/src/middleware/auth.middleware';
-import EnhancedLessonService from '../../server/src/services/lesson.service';
-import { getErrorMessage } from '../../shared/utils/error.utils';
+import { AuthRequest } from '../middleware/auth.middleware';
+import EnhancedLessonService from '../services/lesson.service';
+import { getErrorMessage } from '../../../shared/utils/error.utils';
 
 // Schemy dla requestów
 const QuerySchema = z.object({

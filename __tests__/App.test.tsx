@@ -21,7 +21,7 @@ jest.mock('../src/navigation/MainNavigator', () => {
   return MockMainNavigator;
 });
 
-import App from '../App';
+import App from '../client/App';
 import React from 'react';
 
 describe('App Component', () => {

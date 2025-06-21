@@ -6,7 +6,7 @@ import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { errorHandler, notFoundHandler, setupGlobalErrorHandlers } from './middleware/error.middleware.ts';
 import { detailedLogger, configureCORS } from './middleware/middleware';
-import { initializeFirebase } from './config/firebase.config.ts';
+import { initializeFirebase } from '../server/src/config/firebase.config.ts';
 import enhancedLessonRoutes from './routes/lesson.routes';
 import { createGraphQLYoga, createGraphQLWebSocketServer } from './graphql/yogaServer.ts';
 import { useAppInitialization } from '@/hooks/useAppInitialization';
