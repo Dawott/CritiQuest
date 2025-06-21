@@ -12,8 +12,8 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import LottieView from 'lottie-react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { Philosopher, Rarity } from 'shared/types/database.types';
-import { PullResult } from 'server/src/services/gacha.service';
+import { Philosopher, Rarity } from '../../../../shared/types/database.types';
+import { PullResult } from '../../../../server/src/services/gacha.service';
 
 const { width, height } = Dimensions.get('window');
 

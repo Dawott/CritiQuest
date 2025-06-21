@@ -4,7 +4,7 @@ import {
   DB_PATHS, 
   runTransaction,
   batchWrite 
-} from 'server/src/config/firebase.config';
+} from '../../../server/src/config/firebase.config';
 import { 
   User, 
   UserProgression, 
@@ -12,8 +12,8 @@ import {
   ProgressionEvent,
   AchievementProgress,
   LevelReward 
-} from 'shared/types/database.types';
-import DatabaseService from './firebase/database.service';
+} from '../../../shared/types/database.types';
+import DatabaseService from '../../../client/src/services/firebase/database.service';
 import { EventEmitter } from 'events';
 import { database } from 'firebase-admin';
 

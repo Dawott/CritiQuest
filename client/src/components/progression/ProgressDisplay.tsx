@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useProgressionDisplay } from '@/hooks/useProgression';
+import { useProgressionDisplay } from '../../hooks/useProgression';
 import Animated, { 
   useAnimatedStyle, 
   withSpring 

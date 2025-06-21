@@ -1,4 +1,4 @@
-import { AIService } from 'server/src/services/ai.service';
+//import { AIService } from 'server/src/services/ai.service';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -9,8 +9,8 @@ import {
   Animated,
   Dimensions,
 } from 'react-native';
-import { DebatePhilosopher } from '@/hooks/selectedPhilosophers';
-import { Philosopher, Rarity } from 'shared/types/database.types';
+import { DebatePhilosopher } from '../../hooks/selectedPhilosophers';
+import { Philosopher, Rarity } from '../../../../shared/types/database.types';
 
 //const { width, height } = Dimensions.get('window');
 

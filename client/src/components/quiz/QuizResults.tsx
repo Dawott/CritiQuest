@@ -12,7 +12,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import LottieView from 'lottie-react-native';
-import { QuizResult } from 'client/src/store/quizAtoms';
+import { QuizResult } from '../../../../client/src/store/quizAtoms';
 
 const { width, height } = Dimensions.get('window');
 

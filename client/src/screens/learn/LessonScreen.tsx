@@ -14,13 +14,13 @@ import {
 import { RouteProp, useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
-import { LessonWithId } from 'shared/types/database.types';
-import  EnhancedLessonService from 'server/src/services/lesson.service';
-import { ContentRenderer } from 'client/src/components/learning/ContentRenderer';
-import { useLessonContent } from '@/hooks/useLessonContent';
-import { useProgression } from '@/hooks/useProgression';
-import { LessonProgressBar } from 'client/src/components/common/ProgressBar';
-import { LessonOverviewModal } from 'client/src/components/modals/LessonOverviewModal';
+import { LessonWithId } from '../../../../shared/types/database.types';
+import  EnhancedLessonService from '../../../../server/src/services/lesson.service';
+import { ContentRenderer } from '../../../../client/src/components/learning/ContentRenderer';
+import { useLessonContent } from '../../hooks/useLessonContent';
+import { useProgression } from '../../hooks/useProgression';
+import { LessonProgressBar } from '../../../../client/src/components/common/ProgressBar';
+import { LessonOverviewModal } from '../../../../client/src/components/modals/LessonOverviewModal';
 
 //const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 

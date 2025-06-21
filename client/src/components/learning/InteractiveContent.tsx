@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
-import { LessonSection } from 'shared/types/database.types';
+import { LessonSection } from '../../../../shared/types/database.types';
 
 interface InteractiveContentProps {
   section: LessonSection;

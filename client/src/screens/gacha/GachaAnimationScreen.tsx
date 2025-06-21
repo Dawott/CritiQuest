@@ -7,7 +7,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { GachaPullResult } from 'client/src/components/gacha/GachaPullResult';
+//import { GachaPullResult } from 'client/src/components/gacha/GachaPullResult';
 
 export default function GachaAnimationScreen() {
   const navigation = useNavigation();

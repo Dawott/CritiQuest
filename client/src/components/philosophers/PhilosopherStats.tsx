@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { PhilosopherStats as PhilosopherStatsType } from 'shared/types/database.types';
+import { PhilosopherStats as PhilosopherStatsType } from '../../../../shared/types/database.types';
 
 interface PhilosopherStatsProps {
   stats: PhilosopherStatsType;

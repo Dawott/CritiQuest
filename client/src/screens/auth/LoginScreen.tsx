@@ -14,8 +14,8 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useNavigation } from '@/hooks/useNavigation';
-import AuthService from '@/services/firebase/auth.service';
+import { useNavigation } from '../../hooks/useNavigation';
+import AuthService from '../../services/firebase/auth.service';
 
 export default function LoginScreen() {
   const navigation = useNavigation();

@@ -9,7 +9,7 @@ import {
   Dimensions,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { LessonWithId } from 'shared/types/database.types';
+import { LessonWithId } from '../../../../shared/types/database.types';
 
 interface LessonOverviewModalProps {
   visible: boolean;

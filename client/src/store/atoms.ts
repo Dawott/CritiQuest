@@ -1,5 +1,5 @@
 import {atom} from 'jotai';
-import { User, Philosopher} from 'shared/types/database.types';
+import { User, Philosopher} from '../../../shared/types/database.types';
 
 // User state
 export const currentUserAtom = atom<User | null>(null);

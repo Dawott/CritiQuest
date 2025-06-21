@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useNavigation } from '@/hooks/useNavigation';
+import { useNavigation } from '../../hooks/useNavigation';
 
 const { width, height } = Dimensions.get('window');
 

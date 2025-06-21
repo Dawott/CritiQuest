@@ -1,6 +1,6 @@
 import { atom } from 'jotai';
-import { Quiz, Question, DebateQuestion, DebateResult } from 'shared/types/database.types';
-import { StoredQuizResult } from '@/services/firebase/quiz-database.service';
+import { Quiz, Question, DebateQuestion, DebateResult } from '../../../shared/types/database.types';
+import { StoredQuizResult } from '../services/firebase/quiz-database.service';
 
 export interface QuizSession {
   quizId: string;

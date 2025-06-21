@@ -4,10 +4,10 @@ import admin from 'firebase-admin';
 import { validateRequest, generalRateLimit, checkFirebaseConnection } from '../middleware/middleware';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 import { asyncHandler, AppError, ErrorType } from '../middleware/error.middleware';
-import { EnhancedDatabaseService } from '../services/firebase/database.service';
-import { QuizDatabaseService } from '../services/firebase/quiz-database.service';
+import { EnhancedDatabaseService } from '../../../client/src/services/firebase/database.service';
+import { QuizDatabaseService } from '../../../client/src/services/firebase/quiz-database.service';
 import GachaService from '../services/gacha.service';
-import { DB_PATHS } from '../../server/src/config/firebase.config';
+import { DB_PATHS } from '../../../server/src/config/firebase.config';
 
 const router = Router();
 const dbService = new EnhancedDatabaseService();

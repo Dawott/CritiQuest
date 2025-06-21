@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAtom } from 'jotai';
-import { currentUserAtom } from 'client/src/store/atoms';
-import AuthService from '@/services/firebase/auth.service';
+import { currentUserAtom } from '../../../client/src/store/atoms';
+import AuthService from '../services/firebase/auth.service';
 import UserProgressionService, { 
   ProgressionUpdate, 
   ProgressionReward,
   ProgressionMilestone 
-} from 'server/src/services/user-progression.service';
+} from '../../../server/src/services/user-progression.service';
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';

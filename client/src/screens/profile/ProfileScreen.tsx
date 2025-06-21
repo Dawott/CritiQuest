@@ -13,14 +13,14 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAtom } from 'jotai';
-import { currentUserAtom } from 'client/src/store/atoms';
-import { useUser } from '@/hooks/useUser';
-import AuthService from '@/services/firebase/auth.service';
+import { currentUserAtom } from '../../../../client/src/store/atoms';
+import { useUser } from '../../hooks/useUser';
+import AuthService from '../../services/firebase/auth.service';
 import { useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CompositeNavigationProp } from '@react-navigation/native';
-import { MainTabParamList, RootStackParamList } from 'client/src/navigation/types';
+import { MainTabParamList, RootStackParamList } from '../../../../client/src/navigation/types';
 
 // Import new hooks and components
 import {
@@ -29,12 +29,12 @@ import {
   useUnlockedAchievements,
   useRecentActivity,
   useMilestones,
-} from '@/hooks/useProfileData';
-import { PhilosopherCollectionCard } from 'client/src/components/profile/PhilosopherCollectionCard';
-import { CompletedLessonsCard } from 'client/src/components/profile/CompletedLessonsCard';
-import { AchievementsCard } from 'client/src/components/profile/AchievementsCard';
-import { MilestonesCard } from 'client/src/components/profile/MilestonesCard';
-import { RecentActivityCard } from 'client/src/components/profile/RecentActivityCard';
+} from '../../hooks/useProfileData';
+import { PhilosopherCollectionCard } from '../../../../client/src/components/profile/PhilosopherCollectionCard';
+import { CompletedLessonsCard } from '../../../../client/src/components/profile/CompletedLessonsCard';
+import { AchievementsCard } from '../../../../client/src/components/profile/AchievementsCard';
+import { MilestonesCard } from '../../../../client/src/components/profile/MilestonesCard';
+import { RecentActivityCard } from '../../../../client/src/components/profile/RecentActivityCard';
 
 const { width } = Dimensions.get('window');
 

@@ -5,7 +5,7 @@ import {
   LessonProgressBar, 
   SimpleProgressBar, 
   DetailedProgressBar 
-} from 'client/src/components/common/ProgressBar';
+} from '../../components/common/ProgressBar';
 
 export const ProgressBarExamples: React.FC = () => {
   return (

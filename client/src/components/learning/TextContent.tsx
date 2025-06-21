@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { LessonSection } from 'shared/types/database.types';
+import { LessonSection } from '../../../../shared/types/database.types';
 
 interface TextContentProps {
   section: LessonSection;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { LessonSection } from 'shared/types/database.types';
+import { LessonSection } from '../../../../shared/types/database.types';
 import { TextContent } from './TextContent';
 //import { VideoContent } from './VideoContent';
 import { InteractiveContent } from './InteractiveContent';

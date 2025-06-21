@@ -3,10 +3,10 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useAtom } from 'jotai';
 import { Alert, Platform } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
-import QuizService from 'server/src/services/quiz.service'; 
-import { QuizDatabaseService, StoredQuizResult } from '@/services/firebase/quiz-database.service'; 
-import { currentUserAtom } from 'client/src/store/atoms';
-import { quizSessionAtom, quizProgressAtom, quizTimerAtom, quizHistoryAtom } from 'client/src/store/quizAtoms';
+//import QuizService from 'server/src/services/quiz.service'; 
+import { QuizDatabaseService, StoredQuizResult } from '../services/firebase/quiz-database.service'; 
+import { currentUserAtom } from '../../../client/src/store/atoms';
+import { quizSessionAtom, quizProgressAtom, quizTimerAtom, quizHistoryAtom } from '../../../client/src/store/quizAtoms';
 
 export interface QuizSubmissionOptions {
   enableOfflineMode?: boolean;

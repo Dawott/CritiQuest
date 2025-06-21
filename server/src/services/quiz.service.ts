@@ -1,9 +1,9 @@
-import { Quiz, Question, QuizType } from 'shared/types/database.types';
-import DatabaseService from './firebase/database.service';
-import { Difficulty } from 'shared/types/database.types';
+import { Quiz, Question, QuizType } from '../../../shared/types/database.types';
+import DatabaseService from '../../../client/src/services/firebase/database.service';
+import { Difficulty } from '../../../shared/types/database.types';
 import { GamificationService } from './gamification.service';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { QuizResult, QuizSession } from 'client/src/store/quizAtoms';
+import { QuizResult, QuizSession } from '../../../client/src/store/quizAtoms';
 import NetInfo from '@react-native-community/netinfo';
 import { getErrorMessage } from '../../../shared/utils/error.utils';
 

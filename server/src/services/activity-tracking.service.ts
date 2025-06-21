@@ -1,7 +1,7 @@
-import DatabaseService from '@/services/firebase/database.service';
-import EnhancedDatabaseService  from '@/services/firebase/database.service';
-import { DB_PATHS } from 'server/src/config/firebase.config';
-import { RecentActivityItem } from '@/hooks/useProfileData';
+import DatabaseService from '../../../client/src/services/firebase/database.service';
+import EnhancedDatabaseService  from '../../../client/src/services/firebase/database.service';
+import { DB_PATHS } from '../../../server/src/config/firebase.config';
+import { RecentActivityItem } from '../../../client/src/hooks/useProfileData';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface ActivityData {

@@ -16,10 +16,10 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { useAtom } from 'jotai';
-import { currentUserAtom } from 'client/src/store/atoms';
-import DatabaseService from '@/services/firebase/database.service';
-import { Philosopher, OwnedPhilosopher, Rarity } from 'shared/types/database.types';
-import AuthService from '@/services/firebase/auth.service';
+import { currentUserAtom } from '../../../../client/src/store/atoms';
+import DatabaseService from '../../services/firebase/database.service';
+import { Philosopher, OwnedPhilosopher, Rarity } from '../../../../shared/types/database.types';
+import AuthService from '../../services/firebase/auth.service';
 
 const { width } = Dimensions.get('window');
 const SLOT_SIZE = (width - 80) / 4;

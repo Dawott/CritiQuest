@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { PhilosopherCollectionItem } from '@/hooks/useProfileData';
+import { PhilosopherCollectionItem } from '../../hooks/useProfileData';
 
 interface PhilosopherCollectionCardProps {
   philosophers: PhilosopherCollectionItem[];

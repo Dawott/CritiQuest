@@ -15,11 +15,11 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { RouteProp } from '@react-navigation/native';
-import { RootStackParamList } from 'client/src/navigation/types';
-import DatabaseService from '@/services/firebase/database.service';
-import { Philosopher, OwnedPhilosopher, Rarity } from 'shared/types/database.types';
-import { useUser } from '@/hooks/useUser';
-import AuthService from '@/services/firebase/auth.service';
+import { RootStackParamList } from '../../../../client/src/navigation/types';
+import DatabaseService from '../../services/firebase/database.service';
+import { Philosopher, OwnedPhilosopher, Rarity } from '../../../../shared/types/database.types';
+import { useUser } from '../../hooks/useUser';
+import AuthService from '../../services/firebase/auth.service';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 52) / 2;

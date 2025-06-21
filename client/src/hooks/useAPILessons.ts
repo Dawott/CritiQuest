@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { LessonAPI } from '../services/api/lesson.api';
-import { Lesson } from '../types/database.types';
+import { LessonAPI } from '../../../server/src/services/api/lesson.api';
+import { Lesson } from '../../../shared/types/database.types';
 
 export function useApiLessons(stage?: string) {
   const [lessons, setLessons] = useState<Lesson[]>([]);

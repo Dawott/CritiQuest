@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { Lesson, LessonWithId } from 'shared/types/database.types';
-import EnhancedDatabaseService from './firebase/database.service';
-import { DB_PATHS } from 'server/src/config/firebase.config';
+import { Lesson, LessonWithId } from '../../../shared/types/database.types';
+import EnhancedDatabaseService from '../../../client/src/services/firebase/database.service';
+import { DB_PATHS } from '../../../server/src/config/firebase.config';
 import { getErrorMessage } from '../../../shared/utils/error.utils';
 
 // Validation schemas using Zod

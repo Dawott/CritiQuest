@@ -1,6 +1,6 @@
 import { CompositeNavigationProp, useNavigation as useRNNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { MainTabParamList, RootStackParamList } from 'client/src/navigation/types';
+import { MainTabParamList, RootStackParamList } from '../../../client/src/navigation/types';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 
 /*export function useNavigation() {

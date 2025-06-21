@@ -4,9 +4,9 @@ import admin from 'firebase-admin';
 import { validateRequest, generalRateLimit, checkFirebaseConnection } from '../middleware/middleware';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 import { asyncHandler, AppError, ErrorType } from '../middleware/error.middleware';
-import {EnhancedDatabaseService} from '../services/firebase/database.service';
-import { PhilosopherSchema, PhilosopherStatsSchema } from '../utils/schemas';
-import { DB_PATHS } from '../../server/src/config/firebase.config';
+import {EnhancedDatabaseService} from '../../../client/src/services/firebase/database.service';
+import { PhilosopherSchema, PhilosopherStatsSchema } from '../../../shared/utils/schemas';
+import { DB_PATHS } from '../../../server/src/config/firebase.config';
 
 const router = Router();
 const dbService = new EnhancedDatabaseService();

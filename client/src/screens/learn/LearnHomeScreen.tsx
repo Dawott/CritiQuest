@@ -15,9 +15,9 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { useAtom } from 'jotai';
-import { currentUserAtom } from 'client/src/store/atoms';
-import DatabaseService from '@/services/firebase/database.service';
-import { LessonWithId } from 'shared/types/database.types';
+import { currentUserAtom } from '../../../../client/src/store/atoms';
+import DatabaseService from '../../services/firebase/database.service';
+import { LessonWithId } from '../../../../shared/types/database.types';
 
 const { width } = Dimensions.get('window');
 

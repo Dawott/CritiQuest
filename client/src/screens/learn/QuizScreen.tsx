@@ -16,22 +16,22 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useAtom } from 'jotai';
-import { currentUserAtom } from 'client/src/store/atoms';
-import { quizSessionAtom, quizProgressAtom, quizTimerAtom } from 'client/src/store/quizAtoms';
-import DatabaseService from '@/services/firebase/database.service';
-import { Quiz, Question, QuizType, DebateQuestion, Philosopher, DebateResult } from 'shared/types/database.types';
-import { useProgression } from '@/hooks/useProgression';
+import { currentUserAtom } from '../../../../client/src/store/atoms';
+import { quizSessionAtom, quizProgressAtom, quizTimerAtom } from '../../../../client/src/store/quizAtoms';
+import DatabaseService from '../../services/firebase/database.service';
+import { Quiz, Question, QuizType, DebateQuestion, Philosopher, DebateResult } from '../../../../shared/types/database.types';
+import { useProgression } from '../../hooks/useProgression';
 
 // Components
 //import QuizTimer from '@/components/quiz/QuizTimer';
-import QuestionCard from 'client/src/components/quiz/QuestionCard';
-import ScenarioCard from 'client/src/components/quiz/ScenarioCard';
-import DebateCard from 'client/src/components/quiz/DebateCard';
-import QuizResults from 'client/src/components/quiz/QuizResults';
-import PhilosopherHelper from 'client/src/components/quiz/PhilosopherHelper';
-import { useSelectedPhilosophers, DebatePhilosopher } from '@/hooks/selectedPhilosophers';
-import quizService from 'server/src/services/quiz.service';
-import { useQuizSubmission } from '@/hooks/useQuizSubmission';
+import QuestionCard from '../../../../client/src/components/quiz/QuestionCard';
+import ScenarioCard from '../../../../client/src/components/quiz/ScenarioCard';
+import DebateCard from '../../../../client/src/components/quiz/DebateCard';
+import QuizResults from '../../../../client/src/components/quiz/QuizResults';
+import PhilosopherHelper from '../../../../client/src/components/quiz/PhilosopherHelper';
+import { useSelectedPhilosophers, DebatePhilosopher } from '../../hooks/selectedPhilosophers';
+import quizService from '../../../../server/src/services/quiz.service';
+import { useQuizSubmission } from '../../hooks/useQuizSubmission';
 
 
 const { width, height } = Dimensions.get('window');

@@ -11,7 +11,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { Question } from 'shared/types/database.types';
+import { Question } from '../../../../shared/types/database.types';
 import LottieView from 'lottie-react-native';
 
 const { width } = Dimensions.get('window');

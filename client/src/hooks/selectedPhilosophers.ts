@@ -1,6 +1,6 @@
-import { Philosopher, User } from "shared/types/database.types";
+import { Philosopher, User } from "../../../shared/types/database.types";
 import { useEffect, useState } from "react";
-import DatabaseService from "@/services/firebase/database.service";
+import DatabaseService from "../services/firebase/database.service";
 
 export interface DebatePhilosopher extends Philosopher {
   id: string;

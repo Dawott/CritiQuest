@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Lesson } from 'shared/types/database.types';
-import LessonProgressBar from 'client/src/components/common/ProgressBar';
+import { Lesson } from '../../../../shared/types/database.types';
+import LessonProgressBar from '../../../../client/src/components/common/ProgressBar';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 interface LessonCardProps {

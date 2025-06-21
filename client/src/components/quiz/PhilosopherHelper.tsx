@@ -10,8 +10,8 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import DatabaseService from '@/services/firebase/database.service';
-import { Philosopher, Rarity } from 'shared/types/database.types';
+import DatabaseService from '../../services/firebase/database.service';
+import { Philosopher, Rarity } from '../../../../shared/types/database.types';
 
 const { width } = Dimensions.get('window');
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { ProgressionMilestone } from 'shared/types/database.types';
+import { ProgressionMilestone } from '../../../../shared/types/database.types';
 
 interface MilestonesCardProps {
   upcomingMilestones: ProgressionMilestone[];

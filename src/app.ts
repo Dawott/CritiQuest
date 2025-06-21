@@ -4,12 +4,12 @@ import helmet from 'helmet';
 import compression from 'compression';
 import dotenv from 'dotenv';
 import { createServer } from 'http';
-import { errorHandler, notFoundHandler, setupGlobalErrorHandlers } from './middleware/error.middleware.ts';
-import { detailedLogger, configureCORS } from './middleware/middleware';
+import { errorHandler, notFoundHandler, setupGlobalErrorHandlers } from '../server/src/middleware/error.middleware.ts';
+import { detailedLogger, configureCORS } from '../server/src/middleware/middleware';
 import { initializeFirebase } from '../server/src/config/firebase.config.ts';
-import enhancedLessonRoutes from './routes/lesson.routes';
-import { createGraphQLYoga, createGraphQLWebSocketServer } from './graphql/yogaServer.ts';
-import { useAppInitialization } from '@/hooks/useAppInitialization';
+import enhancedLessonRoutes from '../server/src/routes/lesson.routes';
+import { createGraphQLYoga, createGraphQLWebSocketServer } from '../server/src/graphql/yogaServer.ts';
+import { useAppInitialization } from '../client/src/hooks/useAppInitialization';
 
 dotenv.config();
 

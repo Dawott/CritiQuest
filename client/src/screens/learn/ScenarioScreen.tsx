@@ -14,11 +14,11 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useAtom } from 'jotai';
-import { currentUserAtom } from 'client/src/store/atoms';
-import DatabaseService from '@/services/firebase/database.service';
-import { Question } from 'shared/types/database.types';
+import { currentUserAtom } from '../../../../client/src/store/atoms';
+//import DatabaseService from '@/services/firebase/database.service';
+import { Question } from '../../../../shared/types/database.types';
 import { RouteProp } from '@react-navigation/native';
-import { LearnStackParamList } from 'client/src/navigation/types';
+import { LearnStackParamList } from '../../../../client/src/navigation/types';
 
 type ScenarioScreenRouteProp = RouteProp<LearnStackParamList, 'ScenarioScreen'>;
 

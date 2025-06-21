@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { atom, useAtom } from 'jotai';
-import { LessonWithId, LessonSection } from 'shared/types/database.types';
-import EnhancedLessonService from 'server/src/services/lesson.service';
+import { LessonWithId, LessonSection } from '../../../shared/types/database.types';
+import EnhancedLessonService from '../../../server/src/services/lesson.service';
 
 interface LessonContentState {
   currentSectionIndex: number;

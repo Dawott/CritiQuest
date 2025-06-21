@@ -16,12 +16,12 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { useAtom } from 'jotai';
-import { currentUserAtom } from 'client/src/store/atoms';
-import DatabaseService from '@/services/firebase/database.service';
-import { Philosopher, OwnedPhilosopher, Rarity } from 'shared/types/database.types';
-import AuthService from '@/services/firebase/auth.service';
+import { currentUserAtom } from '../../../../client/src/store/atoms';
+import DatabaseService from '../../services/firebase/database.service';
+import { Philosopher, OwnedPhilosopher, Rarity } from '../../../../shared/types/database.types';
+import AuthService from '../../services/firebase/auth.service';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from 'client/src/navigation/types';
+import { RootStackParamList } from '../../../../client/src/navigation/types';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 60) / 2;

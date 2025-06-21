@@ -16,12 +16,12 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import LottieView from 'lottie-react-native';
 import { useAtom } from 'jotai';
-import { currentUserAtom } from 'client/src/store/atoms';
-import { useNavigation } from '@/hooks/useNavigation';
-import GachaService, { PullResult } from 'server/src/services/gacha.service';
-import DatabaseService from '@/services/firebase/database.service';
-import { GachaPullAnimation } from 'client/src/components/gacha/GachaPullAnimation';
-import { Philosopher } from 'shared/types/database.types';
+import { currentUserAtom } from '../../../../client/src/store/atoms';
+import { useNavigation } from '../../hooks/useNavigation';
+import GachaService, { PullResult } from '../../../../server/src/services/gacha.service';
+import DatabaseService from '../../services/firebase/database.service';
+import { GachaPullAnimation } from '../../../../client/src/components/gacha/GachaPullAnimation';
+import { Philosopher } from '../../../../shared/types/database.types';
 
 const { width, height } = Dimensions.get('window');
 

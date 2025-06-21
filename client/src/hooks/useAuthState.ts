@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import { useAtom } from 'jotai';
-import AuthService from '@/services/firebase/auth.service';
-import DatabaseService from '@/services/firebase/database.service';
-import { currentUserAtom } from 'client/src/store/atoms';
+import AuthService from '../services/firebase/auth.service';
+import DatabaseService from '../services/firebase/database.service';
+import { currentUserAtom } from '../../../client/src/store/atoms';
 
 export function useAuthState() {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseAuthTypes.User | null>(null);

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import { Rarity } from 'shared/types/database.types';
+import { Rarity } from '../../../../shared/types/database.types';
 
 interface PhilosopherRarityBadgeProps {
   rarity: Rarity;

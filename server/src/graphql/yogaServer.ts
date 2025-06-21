@@ -7,7 +7,7 @@ import { Express } from 'express';
 import admin from 'firebase-admin';
 import { schema } from './schema.ts';
 import EnhancedLessonService from '../services/lesson.service';
-import { AppError, ErrorType } from '@/middleware/error.middleware.ts';
+import { AppError, ErrorType } from '../middleware/error.middleware.ts';
 import { GraphQLError } from 'graphql';
 
 interface YogaContext {

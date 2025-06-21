@@ -10,7 +10,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LottieView from 'lottie-react-native';
-import { ProgressionMilestone } from 'server/src/services/user-progression.service';
+import { ProgressionMilestone } from '../../../../server/src/services/user-progression.service';
 
 const { width, height } = Dimensions.get('window');
 

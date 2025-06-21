@@ -1,9 +1,9 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { CollectionStackParamList } from './types';
-import CollectionHomeScreen from 'client/src/screens/collection/CollectionHomeScreen';
+import CollectionHomeScreen from '../../../client/src/screens/collection/CollectionHomeScreen';
 //import PhilosopherListScreen from '@/screens/collection/PhilosopherListScreen';
-import TeamBuilderScreen from 'client/src/screens/collection/TeamBuilderScreen';
+import TeamBuilderScreen from '../../../client/src/screens/collection/TeamBuilderScreen';
 
 const CollectionStack = createNativeStackNavigator<CollectionStackParamList>();
 

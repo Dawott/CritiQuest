@@ -4,10 +4,10 @@ import admin from 'firebase-admin';
 import { validateRequest, generalRateLimit, strictRateLimit, checkFirebaseConnection } from '../middleware/middleware';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 import { asyncHandler, AppError, ErrorType } from '../middleware/error.middleware';
-import { EnhancedDatabaseService } from '../services/firebase/database.service';
+import { EnhancedDatabaseService } from '../../../client/src/services/firebase/database.service';
 import GachaService, { GachaPool, RarityRates, PullResult, GachaHistory } from '../services/gacha.service';
-import { DB_PATHS } from '../../server/src/config/firebase.config';
-import { getErrorMessage } from '../utils/error.utils';
+import { DB_PATHS } from '../../../server/src/config/firebase.config';
+import { getErrorMessage } from '../../../shared/utils/error.utils';
 
 const router = Router();
 const dbService = new EnhancedDatabaseService();

@@ -1,10 +1,10 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { LearnStackParamList } from './types';
-import LearnHomeScreen from 'client/src/screens/learn/LearnHomeScreen';
-import LessonDetailScreen from 'client/src/screens/learn/LessonDetailScreen';
-import StageSelectScreen from 'client/src/screens/learn/StageSelectScreen';
-import ScenarioScreen from 'client/src/screens/learn/ScenarioScreen';
+import LearnHomeScreen from '../../../client/src/screens/learn/LearnHomeScreen';
+import LessonDetailScreen from '../../../client/src/screens/learn/LessonDetailScreen';
+import StageSelectScreen from '../../../client/src/screens/learn/StageSelectScreen';
+import ScenarioScreen from '../../../client/src/screens/learn/ScenarioScreen';
 
 const LearnStack = createNativeStackNavigator<LearnStackParamList>();
 

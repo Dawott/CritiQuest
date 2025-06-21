@@ -1,6 +1,6 @@
 import { string } from 'zod';
-import DatabaseService from './firebase/database.service';
-import { Achievement, AchievementProgress } from 'shared/types/database.types';
+import DatabaseService from '../../../client/src/services/firebase/database.service';
+import { Achievement, AchievementProgress } from '../../../shared/types/database.types';
 
 interface DebateResult {
   winner: 'user' | 'opponent';

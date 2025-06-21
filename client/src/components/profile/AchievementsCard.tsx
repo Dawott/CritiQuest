@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { UnlockedAchievementItem } from '@/hooks/useProfileData';
+import { UnlockedAchievementItem } from '../../hooks/useProfileData';
 
 interface AchievementsCardProps {
   achievements: UnlockedAchievementItem[];

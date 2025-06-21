@@ -7,9 +7,9 @@ import {
   StyleSheet,
   SafeAreaView,
 } from 'react-native';
-import { PhilosopherCard } from 'client/src/components/philosophers/PhilosopherCard';
-import { LessonCard } from 'client/src/components/learning/LessonCard';
-import { Button } from 'client/src/components/common/Button';
+import { PhilosopherCard } from '../../../client/src/components/philosophers/PhilosopherCard';
+import { LessonCard } from '../../../client/src/components/learning/LessonCard';
+import { Button } from '../../../client/src/components/common/Button';
 
 type ComponentExample = {
   name: string;

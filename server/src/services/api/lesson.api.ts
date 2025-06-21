@@ -1,5 +1,5 @@
 import apiClient from './client';
-import { Lesson, LessonProgress } from 'shared/types/database.types';
+import { Lesson, LessonProgress } from '../../../../shared/types/database.types';
 
 export class LessonAPI {
   static async getLessons(options?: {

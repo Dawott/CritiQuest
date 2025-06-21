@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { CompletedLessonItem } from '@/hooks/useProfileData';
+import { CompletedLessonItem } from '../../hooks/useProfileData';
 
 interface CompletedLessonsCardProps {
   lessons: CompletedLessonItem[];

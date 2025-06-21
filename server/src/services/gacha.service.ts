@@ -1,5 +1,5 @@
-import { Philosopher, Rarity } from 'shared/types/database.types';
-import DatabaseService from './firebase/database.service';
+import { Philosopher, Rarity } from '../../../shared/types/database.types';
+import DatabaseService from '../../../client/src/services/firebase/database.service';
 
 export interface GachaPool {
   id: string;

@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { getErrorMessage } from '../utils/error.utils';
+import { getErrorMessage } from '../../../shared/utils/error.utils';
 
 // Define error types for better categorization
 export enum ErrorType {

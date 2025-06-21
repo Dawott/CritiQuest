@@ -3,8 +3,8 @@ import { z } from 'zod';
 import admin from 'firebase-admin';
 import { validateRequest, authRateLimit, checkFirebaseConnection } from '../middleware/middleware';
 import { asyncHandler, AppError, ErrorType } from '../middleware/error.middleware';
-import { EnhancedDatabaseService } from '../services/firebase/database.service';
-import { UserProfileSchema } from '../utils/schemas';
+import { EnhancedDatabaseService } from '../../../client/src/services/firebase/database.service';
+//import { UserProfileSchema } from '../utils/schemas';
 import { AuthRequest } from '../middleware/auth.middleware';
 
 const router = Router();
