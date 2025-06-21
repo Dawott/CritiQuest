@@ -15,11 +15,11 @@ jest.mock('jotai', () => ({
 jest.mock('react-native-gesture-handler', () => ({
   GestureHandlerRootView: ({ children }: any) => children,
 }));
-
+/*
 jest.mock('../src/navigation/MainNavigator', () => {
   const MockMainNavigator = () => null;
   return MockMainNavigator;
-});
+});*/
 
 import App from '../client/App';
 import React from 'react';
